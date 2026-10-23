@@ -334,12 +334,28 @@ mod v06 {
     /// 产品化：网络地址排序、免安装模式判断、单实例“显示窗口”接口只对本机开放
     #[tokio::test]
     async fn productization_helpers() {
-        let wifi: std::net::Ipv4Addr = "192.168.1.20".parse().unwrap();
-        let vm: std::net::Ipv4Addr = "192.168.56.1".parse().unwrap();
-        let ts: std::net::Ipv4Addr = "100.80.1.2".parse().unwrap();
-        assert!(ip_score(&wifi, "WLAN", Some("192.168.1.20")) < ip_score(&wifi, "WLAN", None));
-        assert!(ip_score(&wifi, "WLAN", None) < ip_score(&vm, "VirtualBox Host-Only", None));
-        assert!(ip_score(&wifi, "WLAN", None) < ip_score(&ts, "Tailscale", None));
+        let ip = |s: &str| -> std::net::Ipv4Addr { s.parse().unwrap() };
+        let order = |list: Vec<(&str, &str)>, def: Option<&str>| -> Vec<String> {
+            rank_nets(list.into_iter().map(|(n, a)| (n.to_string(), ip(a))).collect(), def).into_iter().map(|c| c.ip).collect()
+        };
+        // 普通情况：系统默认上网网卡排第一；虚拟机、Tailscale 排后面
+        assert_eq!(order(vec![("VirtualBox Host-Only", "192.168.56.1"), ("WLAN", "192.168.1.20"), ("Tailscale", "100.80.1.2")], Some("192.168.1.20")),
+                   vec!["192.168.1.20", "192.168.56.1", "100.80.1.2"]);
+        // v1.0.1 实际案例：v2rayN 开着 TUN，系统默认上网网卡是 172.18.0.1——Wi-Fi 仍然排第一
+        let r = rank_nets(vec![("singbox_tun".into(), ip("172.18.0.1")), ("WLAN".into(), ip("192.168.99.22"))], Some("172.18.0.1"));
+        assert_eq!(r[0].ip, "192.168.99.22");
+        assert!(!r[0].virt && r[1].virt);
+        // 网卡名看不出来时，按地址判断：172.x.x.1（WSL / Docker / TUN 网关）、198.18/15（代理 fake-ip）
+        assert_eq!(order(vec![("Unknown", "172.18.0.1"), ("以太网", "10.0.0.8")], Some("172.18.0.1")), vec!["10.0.0.8", "172.18.0.1"]);
+        assert_eq!(order(vec![("Meta", "198.18.0.1"), ("Wi-Fi", "192.168.0.5")], Some("198.18.0.1")), vec!["192.168.0.5", "198.18.0.1"]);
+        for (n, a) in [("vEthernet (WSL)", "172.25.160.1"), ("Clash", "198.19.0.1"), ("WireGuard Tunnel", "10.8.0.2"), ("OpenVPN TAP-Windows6", "10.9.0.6")] {
+            assert!(looks_virtual(&ip(a), n), "{} {}", n, a);
+        }
+        for (n, a) in [("WLAN", "192.168.1.20"), ("以太网", "172.20.10.3"), ("Wi-Fi", "10.0.0.8"), ("Ethernet 2", "192.168.0.1")] {
+            assert!(!looks_virtual(&ip(a), n), "{} {}", n, a);
+        }
+        // v1.0.1：iPad 第一次打开（没有记录）默认是白板
+        assert!(crate::PAD_JS.contains(r#"var mode = store("wb_mode") === "annotate" ? "annotate" : "board";"#));
         let dir = std::env::temp_dir().join(format!("inkcast-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();

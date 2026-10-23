@@ -15,7 +15,8 @@
   var connEl = $("conn"), noticeEl = $("notice"), usageEl = $("usage");
 
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
-  var mode = store("wb_mode") === "board" ? "board" : "annotate";
+  // v1.0.1：第一次连接（或换了网络地址，iPad 上没有记录）时默认显示白板；之后记住上次选的模式
+  var mode = store("wb_mode") === "annotate" ? "annotate" : "board";
   var token = store("wb_token") || null;
 
   // ---------- 工具 ----------

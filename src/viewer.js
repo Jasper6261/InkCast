@@ -21,6 +21,8 @@ const overlayStatusHandlers = []; // 标注层状态的订阅者（见下方“�
 let mouseStroke = null;      // 正在写的鼠标笔画 {id}
 let padReady = false;
 let lastPadOnline = 0;        // 上次收到的在线 iPad 数（判断“刚连上”）
+let padEverOnline = false, padOffTimer = 0; // v1.0.1：本次运行里 iPad 是否连上过；短暂断开不立即显示“未连接”
+const PAD_OFF_DELAY = 2500;
 const usageEl = document.getElementById("board-usage");
 const noticeEl = document.getElementById("board-notice");
 let lastUsage = null;
@@ -114,9 +116,14 @@ function connectView() {
     if (msg.t === "pen-size") { pcui.onRemoteSize(msg); return; }
     if (msg.t === "pad-status") {
       const el = document.getElementById("pad-status");
-      I18N.bind(el, msg.online > 0 ? "pc.padOn" : "pc.padOff");
-      el.classList.toggle("on", msg.online > 0);
-      showOnboard(msg.online === 0);
+      // v1.0.1：iPad 切换“屏幕 | 白板”时会断开再重连（约几百毫秒）。以前这一下会让“连接你的 iPad”引导卡片闪一下。
+      // 现在：本次运行里 iPad 连上过以后不再弹引导；“iPad 未连接”也要持续 2.5 秒才显示
+      clearTimeout(padOffTimer);
+      const setPill = (on) => { I18N.bind(el, on ? "pc.padOn" : "pc.padOff"); el.classList.toggle("on", on); };
+      if (msg.online > 0) { padEverOnline = true; setPill(true); }
+      else if (padEverOnline) padOffTimer = setTimeout(() => setPill(false), PAD_OFF_DELAY);
+      else setPill(false);
+      showOnboard(msg.online === 0 && !padEverOnline);
       // v0.8.11：扫码连上以后，二维码窗口自动关闭，并提示已连接
       const qr = document.getElementById("qr-modal");
       if (msg.online > (lastPadOnline || 0) && !qr.classList.contains("hidden")) {
@@ -366,21 +373,38 @@ async function renderPairPanel(chooseIp) {
   try { st = await invoke("get_lan_status"); }
   catch (e) { pairBody.innerHTML = "<p>" + escHtml(T("pair.statusFail", { e: I18N.msg(e) })) + "</p>"; return; }
   if (!st) {
-    let ips = [];
-    try { ips = await invoke("get_candidate_ips"); } catch (e) {}
-    if (!ips.length) { pairBody.innerHTML = "<p>" + escHtml(T("pair.noIp")) + "</p>"; return; }
-    if (!chooseIp) { startLan(ips[0]); return; }
+    const nets = await loadNets();
+    if (!nets.length) { pairBody.innerHTML = "<p>" + escHtml(T("pair.noIp")) + "</p>"; return; }
+    if (!chooseIp) { startLan(nets[0].ip); return; }
+    // v1.0.1：列出网卡名，并标出虚拟网卡 / VPN，方便选对（一般选 WLAN / 以太网）
     pairBody.innerHTML = "<p class='hint'>" + escHtml(T("pair.pickIp")) + "</p>" +
-      ips.map((ip) => `<button class="ip-btn" data-ip="${escHtml(ip)}">${escHtml(ip)}</button>`).join("");
+      nets.map((n) => `<button class="ip-btn${n.virtual ? " virtual" : ""}" data-ip="${escHtml(n.ip)}"><b>${escHtml(n.ip)}</b>` +
+        `<span class="ip-name">${escHtml(n.name || "")}${n.virtual ? (n.name ? " · " : "") + escHtml(T("pair.virtualNet")) : ""}</span></button>`).join("");
     pairBody.querySelectorAll(".ip-btn").forEach((b) =>
       b.addEventListener("click", () => startLan(b.dataset.ip)));
   } else {
+    if (!lastNets.length) await loadNets();
     showSharing(st.ip, st.port, st.pairingActive);
   }
 }
 
+// 候选网卡 [{ip, name, virtual}]，最合适的排第一；老版本后端只有 get_candidate_ips 时退回只有地址
+let lastNets = [];
+async function loadNets() {
+  let nets = [];
+  try { nets = await invoke("get_candidate_nets"); } catch (e) {}
+  if (!Array.isArray(nets) || !nets.length) {
+    try { nets = (await invoke("get_candidate_ips")).map((ip) => ({ ip, name: "", virtual: false })); } catch (e) { nets = []; }
+  }
+  lastNets = nets;
+  return nets;
+}
+
 function showSharing(ip, port, pairingActive) {
-  let html = `<p>${escHtml(T("pair.sharing"))}<b>http://${escHtml(ip)}:${escHtml(port)}</b></p>`;
+  const net = lastNets.find((n) => n.ip === ip);
+  let html = `<p>${escHtml(T("pair.sharing"))}<b>http://${escHtml(ip)}:${escHtml(port)}</b>` +
+    (net && net.name ? ` <span class="ip-name">(${escHtml(net.name)})</span>` : "") + `</p>`;
+  if (net && net.virtual) html += `<p class="warn" id="virtual-warn">${escHtml(T("pair.virtualWarn"))}</p>`;
   if (lastPair && lastPair.ip === ip && lastPair.port === port) {
     html += `<div id="qr-img">${lastPair.qrSvg}</div><div id="qr-url">${escHtml(lastPair.pairUrl)}</div>
              <p class="hint">${escHtml(T("pair.scanHint"))}</p>`;
@@ -390,7 +414,7 @@ function showSharing(ip, port, pairingActive) {
   html += `<div class="row"><button id="btn-repair">${escHtml(T("pair.repair"))}</button><button id="btn-stop">${escHtml(T("pair.stop"))}</button></div>
            <p class="hint">${escHtml(T("pair.sameWifi"))} · <a href="#" id="btn-change-ip">${escHtml(T("pair.changeIp"))}</a></p>
            <details class="trouble"><summary>${escHtml(T("pair.trouble"))}</summary><ul>
-             <li>${escHtml(T("pair.trouble1"))}</li><li>${escHtml(T("pair.trouble2"))}</li></ul>
+             <li>${escHtml(T("pair.trouble1"))}</li><li>${escHtml(T("pair.trouble3"))}</li><li>${escHtml(T("pair.trouble2"))}</li></ul>
              ${appInfo.os === "windows" ? `<button id="btn-firewall">${escHtml(T("pair.fixFirewall"))}</button><p class="hint" id="fw-result">${escHtml(T("pair.fixFirewallHint"))}</p>` : ""}
            </details>`;
   pairBody.innerHTML = html;

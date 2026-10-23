@@ -1,4 +1,4 @@
-//! InkCast（墨投）v1.0.0 — Windows / macOS 桌面端。
+//! InkCast（墨投）v1.0.1 — Windows / macOS 桌面端。
 //!
 //! 双监听：
 //!   - loopback（127.0.0.1:0，常开）：只给本机 viewer 用，hostToken 经 Tauri command 下发。
@@ -361,6 +361,7 @@ fn get_app_info(app: tauri::AppHandle) -> serde_json::Value {
 fn get_notices() -> &'static str { include_str!("../THIRD_PARTY_NOTICES.txt") }
 
 /// iPad 连不上时：放行本程序的入站连接（只限本局域网、只限 TCP）。会弹出 Windows 管理员确认框，由用户本人确认。
+/// v1.0.1：只替换“这个程序文件”的旧规则；以前会删掉所有墨投规则，导致另一个位置的墨投（如旧版）被挡住
 #[tauri::command]
 async fn fix_firewall() -> Result<String, String> {
     #[cfg(windows)]
@@ -369,8 +370,7 @@ async fn fix_firewall() -> Result<String, String> {
         let exe = std::env::current_exe().map_err(|e| e.to_string())?.display().to_string().replace('\'', "''");
         let script = format!(
             "$exe='{exe}'; \
-             Get-NetFirewallApplicationFilter | Where-Object {{ $_.Program -eq $exe }} | Get-NetFirewallRule | Where-Object {{ $_.Action -eq 'Block' -and $_.Direction -eq 'Inbound' }} | Remove-NetFirewallRule; \
-             Get-NetFirewallRule -Group 'InkCast' -ErrorAction SilentlyContinue | Remove-NetFirewallRule; \
+             Get-NetFirewallApplicationFilter | Where-Object {{ $_.Program -eq $exe }} | Get-NetFirewallRule | Where-Object {{ ($_.Action -eq 'Block' -and $_.Direction -eq 'Inbound') -or $_.Group -eq 'InkCast' }} | Remove-NetFirewallRule; \
              New-NetFirewallRule -DisplayName 'InkCast (local network, TCP)' -Group 'InkCast' -Direction Inbound -Action Allow -Program $exe -Protocol TCP -RemoteAddress LocalSubnet -Profile Private,Public | Out-Null");
         let utf16: Vec<u8> = script.encode_utf16().flat_map(|u| u.to_le_bytes()).collect();
         let encoded = base64::engine::general_purpose::STANDARD.encode(utf16);
@@ -1198,44 +1198,77 @@ fn get_ws_port(s: tauri::State<TauriState>) -> u16 {
     s.shared.loopback_port
 }
 
-/// 候选网卡 IPv4（过滤 loopback / link-local）
-#[tauri::command]
-fn get_candidate_ips() -> Vec<String> {
-    // 排序：系统默认上网的那块网卡排第一，其次是家用 / 公司局域网地址；虚拟网卡（虚拟机、WSL、VPN）放最后
+/// 候选网卡：地址 + 网卡名（Windows 上是“网络连接”里看到的名字，如 WLAN、以太网）+ 是否像虚拟网卡
+#[derive(Serialize, Clone, Debug, PartialEq)]
+pub(crate) struct NetCandidate {
+    ip: String,
+    name: String,
+    #[serde(rename = "virtual")]
+    virt: bool,
+}
+
+/// 候选网卡 IPv4（过滤 loopback / link-local），最可能让 iPad 访问到的排第一
+fn candidate_nets() -> Vec<NetCandidate> {
     let default_ip = local_ip_address::local_ip().ok().filter(|ip| ip.is_ipv4()).map(|ip| ip.to_string());
-    let mut scored: Vec<(u32, String)> = if_addrs::get_if_addrs()
+    let list: Vec<(String, std::net::Ipv4Addr)> = if_addrs::get_if_addrs()
         .unwrap_or_default()
         .into_iter()
         .filter_map(|ifa| match ifa.addr {
-            if_addrs::IfAddr::V4(v4) => {
-                let ip = v4.ip;
-                if ip.is_loopback() || ip.is_link_local() { return None; }
-                Some((ip_score(&ip, &ifa.name, default_ip.as_deref()), ip.to_string()))
-            }
+            if_addrs::IfAddr::V4(v4) if !v4.ip.is_loopback() && !v4.ip.is_link_local() => Some((ifa.name, v4.ip)),
             _ => None,
         })
         .collect();
-    scored.sort();
-    let mut ips: Vec<String> = Vec::new();
-    for (_, ip) in scored { if !ips.contains(&ip) { ips.push(ip); } }
+    let mut out = rank_nets(list, default_ip.as_deref());
     // 兜底：枚举失败时至少给 local-ip-address 的结果
-    if ips.is_empty() {
-        if let Some(ip) = default_ip { ips.push(ip); }
+    if out.is_empty() {
+        if let Some(ip) = default_ip { out.push(NetCandidate { ip, name: String::new(), virt: false }); }
     }
-    ips
+    out
 }
 
-fn ip_score(ip: &std::net::Ipv4Addr, name: &str, default_ip: Option<&str>) -> u32 {
-    let o = ip.octets();
-    let mut score = if default_ip == Some(ip.to_string().as_str()) { 0 }
-        else if o[0] == 192 && o[1] == 168 { 10 }
-        else if o[0] == 10 { 20 }
-        else if o[0] == 172 && (16..=31).contains(&o[1]) { 30 }
-        else { 50 };
+/// 排序（可测试）：真实网卡在前（系统默认上网的那块优先，其次家用 / 公司局域网地址）；
+/// 虚拟网卡（虚拟机、WSL、Docker、VPN / 代理软件的 TUN 网卡）放最后。
+/// v1.0.1：v2rayN、Clash 等开着 TUN 模式时，系统“默认上网网卡”就是 TUN（如 172.18.0.1），
+/// 以前会排第一，二维码里是 iPad 访问不到的地址；现在它被认作虚拟网卡，不再优先
+pub(crate) fn rank_nets(list: Vec<(String, std::net::Ipv4Addr)>, default_ip: Option<&str>) -> Vec<NetCandidate> {
+    let mut scored: Vec<(u32, NetCandidate)> = list.into_iter().map(|(name, ip)| {
+        let virt = looks_virtual(&ip, &name);
+        let o = ip.octets();
+        let mut score = if default_ip == Some(ip.to_string().as_str()) { 0 }
+            else if o[0] == 192 && o[1] == 168 { 10 }
+            else if o[0] == 10 { 20 }
+            else if o[0] == 172 && (16..=31).contains(&o[1]) { 30 }
+            else { 50 };
+        if virt { score += 100; }
+        (score, NetCandidate { ip: ip.to_string(), name, virt })
+    }).collect();
+    scored.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.ip.cmp(&b.1.ip)));
+    let mut out: Vec<NetCandidate> = Vec::new();
+    for (_, c) in scored { if !out.iter().any(|x| x.ip == c.ip) { out.push(c); } }
+    out
+}
+
+pub(crate) fn looks_virtual(ip: &std::net::Ipv4Addr, name: &str) -> bool {
     let n = name.to_ascii_lowercase();
-    const VIRTUAL: [&str; 12] = ["vethernet", "vmware", "virtualbox", "vbox", "hyper-v", "wsl", "docker", "utun", "bridge", "zerotier", "tailscale", "loopback"];
-    if VIRTUAL.iter().any(|v| n.contains(v)) || o[0] == 100 && (64..=127).contains(&o[1]) { score += 100; }
-    score
+    const VIRTUAL: [&str; 27] = ["vethernet", "vmware", "virtualbox", "vbox", "hyper-v", "wsl", "docker", "utun", "bridge",
+        "zerotier", "tailscale", "loopback", "tun", "tap", "wireguard", "vpn", "clash", "mihomo", "singbox", "sing-box",
+        "xray", "v2ray", "nekoray", "radmin", "hamachi", "npcap", "openvpn"];
+    let o = ip.octets();
+    VIRTUAL.iter().any(|v| n.contains(v))
+        || o[0] == 100 && (64..=127).contains(&o[1])        // CGNAT：Tailscale 等
+        || o[0] == 198 && (o[1] == 18 || o[1] == 19)         // 198.18.0.0/15：代理软件的 fake-ip / TUN
+        || o[0] == 172 && (16..=31).contains(&o[1]) && o[3] == 1 // 172.x.x.1：WSL / Docker / TUN 网关地址，家用网络很少见
+}
+
+#[tauri::command]
+fn get_candidate_ips() -> Vec<String> {
+    candidate_nets().into_iter().map(|c| c.ip).collect()
+}
+
+/// v1.0.1：连接窗口里显示网卡名，并标出虚拟网卡，方便用户选对
+#[tauri::command]
+fn get_candidate_nets() -> Vec<NetCandidate> {
+    candidate_nets()
 }
 
 #[derive(Serialize)]
@@ -2120,6 +2153,7 @@ fn main() {
             get_host_token,
             get_ws_port,
             get_candidate_ips,
+            get_candidate_nets,
             start_lan,
             stop_lan,
             regenerate_pairing,

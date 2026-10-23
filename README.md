@@ -4,7 +4,41 @@
 
 Annotate your PC screen and use a whiteboard with iPad + Apple Pencil — for teaching, meetings and screencasts. Scan to connect, no app needed; everything stays on your local network, no account, no cloud.
 
-**下载 / Download：** [最新版本 / Latest release](https://github.com/Jasper6261/InkCast/releases/latest)（Windows 免安装 zip / portable zip）
+**下载 / Download：** [最新版本 / Latest release](https://github.com/Jasper6261/InkCast/releases/latest) → 页面下方 **Assets** 里的 `InkCast-<版本>-windows-x64.zip`（免安装）。
+页面上方绿色的 **Code → Download ZIP** 是源代码，不是程序，普通用户不要下载它。
+Get `InkCast-<version>-windows-x64.zip` under **Assets** on the release page. The green **Code → Download ZIP** button gives you the source code, not the app.
+
+## 快速开始 / Quick start
+
+1. 解压 zip，双击 `InkCast.exe`（免安装）。第一次运行如果出现“Windows 已保护你的电脑”，点“更多信息”→“仍要运行”（程序没有数字签名）。
+2. 点右上角“连接 iPad”，用 iPad 相机扫描二维码，在 Safari 中打开。
+3. iPad 上默认是**白板**；点上方“屏幕 | 白板”切换到**屏幕标注**，字会浮在电脑屏幕最上层。
+
+---
+
+1. Unzip and run `InkCast.exe`. If Windows SmartScreen appears, click “More info” → “Run anyway” (the app is not code-signed).
+2. Click “Connect iPad” and scan the QR code with the iPad camera; open it in Safari.
+3. The iPad starts on the **Whiteboard**; tap “Screen | Whiteboard” to annotate the PC screen.
+
+## 扫码后连不上？/ Can't connect?
+
+按顺序检查，大多数情况第 1、2 步就能解决：
+
+| # | 现象 / 原因 | 怎么做 |
+|---|---|---|
+| 1 | 电脑开着 **VPN / 代理软件**（v2rayN、Clash 等的 TUN 模式），或装了 WSL、Docker、虚拟机：二维码里的地址可能是虚拟网卡的（如 `172.18.0.1`、`198.18.x.x`），iPad 访问不到 | 在连接窗口点“**换一个网络地址**”，选标着 **WLAN / 以太网**的那一项（一般 `192.168` 开头）。标着“虚拟网卡 / VPN”的不要选。 |
+| 2 | **Windows 防火墙**挡住了（第一次运行时弹出的“Windows 安全中心警报”点了“取消”，或程序换了位置） | 连接窗口 → “iPad 打不开页面？” → “**允许墨投通过 Windows 防火墙**”，在管理员确认框点“是”，然后在 iPad 上刷新页面。 |
+| 3 | iPad 和电脑**不在同一个 Wi-Fi**，或连的是**访客网络**（访客网络通常禁止设备互访） | 两边连同一个 Wi-Fi 的主网络。手机热点也可以。 |
+| 4 | **iPad 上开着 VPN / 代理** | 关掉 iPad 上的 VPN 后重新扫码。 |
+| 5 | 电脑上**已经开着一个墨投**（托盘里） | 程序只能运行一个；再次双击只会打开已经在运行的那个。先在托盘图标上选“退出”，再打开想用的那个。 |
+
+---
+
+1. **VPN / proxy apps on the PC** (v2rayN, Clash in TUN mode), WSL, Docker or VMs may put a virtual adapter's address in the QR code (e.g. `172.18.0.1`). Click “**Use a different network address**” and pick the **Wi-Fi / Ethernet** one (usually `192.168.…`), not one marked “virtual adapter / VPN”.
+2. **Windows Firewall**: “iPad can't open the page?” → “**Allow InkCast through Windows Firewall**”, confirm the admin prompt, then reload on the iPad.
+3. The iPad and PC must be on the **same Wi-Fi** (guest networks usually isolate devices).
+4. Turn off any **VPN on the iPad**.
+5. Only one copy of InkCast runs at a time: quit the one in the system tray before starting another.
 
 ## 功能 / Features
 

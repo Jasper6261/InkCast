@@ -269,9 +269,22 @@ async function runBrowserCases(page) {
       T.assert(T.calls.some(c => c.command === 'start_lan' && c.args.ip === '192.0.2.1') && document.getElementById('synthetic-qr'),
         'connecting starts sharing on the best network address and shows the QR code right away');
       document.getElementById('btn-change-ip').click(); await T.settle(); await T.settle();
-      T.assert(document.querySelectorAll('.ip-btn').length === 1 && !TEST.lan, 'a different network address can be chosen');
-      document.querySelector('.ip-btn').click(); await T.settle(); await T.settle();
+      {
+        const btns = [...document.querySelectorAll('.ip-btn')];
+        T.assert(btns.length === 2 && !TEST.lan, 'a different network address can be chosen');
+        T.assert(btns[0].textContent.includes('WLAN') && !btns[0].classList.contains('virtual') && btns[1].classList.contains('virtual') &&
+          btns[1].textContent.includes('singbox_tun') && btns[1].textContent.includes('虚拟网卡'),
+          'v1.0.1: the address list shows each adapter name and marks virtual adapters / VPN');
+        btns[1].click(); await T.settle(); await T.settle();
+        T.assert(TEST.lan && TEST.lan.ip === '172.18.0.1' && document.getElementById('virtual-warn') && document.getElementById('virtual-warn').textContent.includes('换一个网络地址'),
+          'v1.0.1: sharing on a virtual adapter warns that the iPad may not reach it');
+        document.getElementById('btn-change-ip').click(); await T.settle(); await T.settle();
+        document.querySelector('.ip-btn').click(); await T.settle(); await T.settle();
+        T.assert(TEST.lan.ip === '192.0.2.1' && !document.getElementById('virtual-warn') && document.getElementById('pair-body').textContent.includes('(WLAN)'),
+          'v1.0.1: the sharing line names the adapter (WLAN)');
+      }
       document.querySelector('.trouble summary').click();
+      T.assert(document.querySelector('.trouble ul').textContent.includes('v2rayN'), 'v1.0.1: troubleshooting explains VPN / proxy apps on the computer');
       document.getElementById('btn-firewall').click(); await T.settle();
       T.assert(TEST.firewallFixed && document.getElementById('fw-result').textContent.length > 0, 'troubleshooting offers a one-click firewall fix on Windows');
       T.assert(!document.getElementById('qr-modal').classList.contains('hidden'), 'QR window is open while waiting for the iPad');
@@ -279,6 +292,20 @@ async function runBrowserCases(page) {
       T.assert(document.getElementById('qr-modal').classList.contains('hidden') && document.getElementById('board-notice').textContent.includes('iPad 已连接'),
         'v0.8.11: the QR window closes by itself once the iPad has scanned and connected');
       T.assert(document.getElementById('onboard').hidden, 'onboarding card hides once an iPad connects');
+      {
+        // v1.0.1：iPad 切换“屏幕 | 白板”时会断开再重连——引导卡片不能闪出来，“未连接”也不立刻显示
+        const view = T.sockets.find(s => s.role === 'view'), pill = document.getElementById('pad-status');
+        T.receive(view, { t: 'pad-status', online: 0 });
+        T.assert(document.getElementById('onboard').hidden && pill.classList.contains('on'),
+          'v1.0.1: a brief iPad reconnect (switching Screen / Whiteboard) does not flash the connect card or the offline state');
+        T.receive(view, { t: 'pad-status', online: 1 });
+        T.receive(view, { t: 'pad-status', online: 0 });
+        await new Promise(r => setTimeout(r, 2700));
+        T.assert(!pill.classList.contains('on') && document.getElementById('onboard').hidden,
+          'v1.0.1: a real disconnect shows "iPad not connected" after a moment, without the connect card');
+        T.receive(view, { t: 'pad-status', online: 1 });
+        T.assert(pill.classList.contains('on'), 'v1.0.1: reconnecting shows connected again');
+      }
       await click('btn-about'); await T.settle(); await T.settle();
       T.assert(!document.getElementById('about-modal').classList.contains('hidden') && document.getElementById('about-version').textContent.includes('0.8.0') &&
         document.getElementById('about-notices').textContent.includes('third-party'), 'about dialog shows version, data location and open-source notices');

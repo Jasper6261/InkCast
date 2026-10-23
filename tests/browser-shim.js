@@ -16,6 +16,8 @@ TEST.assertAPI = {
 };
 // 既有用例按简体中文界面断言；多语言用例在测试中切换语言
 try { localStorage.setItem('wb_lang', 'zh-CN'); localStorage.setItem('wb_help_seen', '1'); } catch (e) {}
+// v1.0.1 起 iPad 第一次打开默认是白板；既有 iPad 用例从“屏幕”模式开始，这里预设上次用的是屏幕
+try { if (location.pathname.endsWith('pad.html')) localStorage.setItem('wb_mode', 'annotate'); } catch (e) {}
 // v0.8.7 回归：电脑端旧版本留下的画笔大小（升级时清一次）；主窗口记住的设置（发送屏幕画面关、自定义快捷键）
 try {
   if (location.pathname.endsWith('viewer.html')) {
@@ -87,6 +89,7 @@ const invoke = async (command, args) => {
     case 'get_host_token': return 'synthetic-test-value';
     case 'get_lan_status': return TEST.lan || null;
     case 'get_candidate_ips': return ['192.0.2.1'];
+    case 'get_candidate_nets': return TEST.nets || [{ ip: '192.0.2.1', name: 'WLAN', virtual: false }, { ip: '172.18.0.1', name: 'singbox_tun', virtual: true }];
     case 'start_lan': TEST.lan = { ip: args.ip, port: 7749, pairingActive: true }; return { ip: args.ip, port: 7749, pairUrl: 'http://' + args.ip + ':7749/pad#p=synthetic', qrSvg: '<svg id="synthetic-qr"></svg>' };
     case 'stop_lan': TEST.lan = null; return;
     case 'get_app_info': return { version: '0.8.0', dataDir: 'D:/InkCast', shotsDir: 'D:/InkCast/screenshots', portable: true, os: TEST.os || 'windows', shortcut: 'Ctrl+Alt+Shift+A' };

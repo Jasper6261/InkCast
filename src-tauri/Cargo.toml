@@ -1,6 +1,6 @@
 [package]
 name = "wireless-whiteboard"
-version = "1.0.0"
+version = "1.0.1"
 description = "InkCast（墨投）：用 iPad 和 Apple Pencil 在电脑屏幕上手写批注"
 edition = "2021"
 license = "Apache-2.0"

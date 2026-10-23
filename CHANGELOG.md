@@ -1,5 +1,21 @@
 # 更新记录 / Changelog
 
+## 1.0.1 — 2026-10-23
+
+- **连接更顺：**电脑开着 VPN / 代理软件（v2rayN、Clash 的 TUN 模式）或装了 WSL、Docker 时，以前二维码里可能是虚拟网卡的地址（如 `172.18.0.1`），iPad 打不开。现在优先用 WLAN / 以太网的地址；“换一个网络地址”里显示网卡名，并标出“虚拟网卡 / VPN”；选到虚拟网卡时会提示。“iPad 打不开页面？”里新增 VPN / 代理的说明。
+- **iPad 默认白板：**第一次连接（或换了网络地址）时，iPad 默认显示白板；之后记住上次选的模式。
+- **切换“屏幕 | 白板”时电脑不再闪出“连接你的 iPad”：**iPad 切换模式时会短暂重连，以前电脑上的连接引导会闪一下。现在 iPad 连上过以后不再弹出引导，短暂断开也不立即显示“未连接”。
+- **防火墙：**“允许墨投通过 Windows 防火墙”只替换当前这个程序文件的规则，不再删掉其他位置墨投的规则。
+- **README：**新增“快速开始”和“扫码后连不上？”排查表；说明要下载 Release 里的 zip，而不是 Code → Download ZIP（源代码）。
+
+---
+
+- **Smoother connection:** with a VPN / proxy app (v2rayN, Clash TUN), WSL or Docker on the PC, the QR code could use a virtual adapter's address the iPad can't reach. Wi-Fi / Ethernet is now preferred; the address list shows adapter names and marks virtual adapters / VPN, with a warning if one is chosen.
+- **iPad starts on the Whiteboard** the first time it connects; afterwards it remembers your last mode.
+- **No more flashing “Connect your iPad” card** on the PC when switching Screen / Whiteboard on the iPad.
+- **Firewall button** only replaces the rule for the running copy of InkCast.
+- **README:** quick start and a “Can't connect?” checklist.
+
 ## 1.0.0 — 2026-10-23
 
 第一个正式版。 / First public release.
