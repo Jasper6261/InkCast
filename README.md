@@ -1,8 +1,10 @@
-# InkCast（墨投）
+# InkCast（墨投）— 用 iPad 在电脑屏幕上写字批注
 
-用 iPad 和 Apple Pencil 在电脑屏幕上手写批注。iPad 不用装 App，用 Safari 扫码即可；只在局域网内传输，不需要账号，不连云端。
+用 iPad 和 Apple Pencil 在电脑屏幕上手写批注、当电子白板。适合上课、开会、录屏讲解。扫码即连，免装 App；只在局域网内传输，不需要账号，不连云端。
 
-Write on your computer screen with an iPad and Apple Pencil. No app to install on the iPad (it uses Safari), no account, no cloud — everything stays on your local network.
+Annotate your PC screen and use a whiteboard with iPad + Apple Pencil — for teaching, meetings and screencasts. Scan to connect, no app needed; everything stays on your local network, no account, no cloud.
+
+**下载 / Download：** [最新版本 / Latest release](https://github.com/Jasper6261/InkCast/releases/latest)（Windows 免安装 zip / portable zip）
 
 ## 功能 / Features
 
