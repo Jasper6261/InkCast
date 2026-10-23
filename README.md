@@ -4,6 +4,14 @@
 
 Annotate your PC screen and use a whiteboard with iPad + Apple Pencil — for teaching, meetings and screencasts. Scan to connect, no app needed; everything stays on your local network, no account, no cloud.
 
+**白板：** iPad 上用 Apple Pencil 写，电脑上的墨投窗口同步显示。 / **Whiteboard:** write on the iPad, it shows up in the InkCast window on the PC.
+
+![iPad 写字，电脑白板同步显示 / Whiteboard demo](docs/demo-whiteboard.gif)
+
+**屏幕标注：** iPad 上看着电脑画面圈画、手写，标注浮在电脑屏幕所有窗口的最上层（录屏和会议共享里也能看到）。 / **Screen annotation:** mark up the PC screen from the iPad; ink floats above every window and shows in recordings and screen sharing.
+
+![iPad 圈画，电脑屏幕上同步出现 / Screen annotation demo](docs/demo-screen-annotation.gif)
+
 ## 两种使用方法 / Two ways to use InkCast
 
 | | **方式一：下载程序（推荐）** | **方式二：从源码编译** |
@@ -114,6 +122,7 @@ The “Source code (zip / tar.gz)” files that GitHub adds to every release are
 | `tests/`、`scripts/` | 浏览器测试 |
 | `win-dev/` | Windows 开发脚本（环境检查、安装工具链、编译、防火墙） |
 | `brand/` | 图标源文件 |
+| `docs/` | README 里的演示动图 |
 
 ## 安全与隐私 / Security & privacy
 

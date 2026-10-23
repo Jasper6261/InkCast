@@ -80,23 +80,35 @@ function scheduleRedraw() {
 
 // ---------- 延迟统计（v0.4 §10：端到端延迟管控） ----------
 // 采样：iPad 发送点的时间戳 → viewer 收到的时间差；滑动窗口 300 个点
-// 注意 iPad 与电脑时钟可能有偏差，负值/超大值丢弃，只看趋势与尖刺
+// v1.0.2：差值里含两台设备的时钟差（以前直接显示，iPad 时钟慢 1 秒就显示“延迟 1300ms”）。
+// 时钟差是常数，取窗口内最小差值当作基准扣掉，显示的是相对最快一次的延迟（局域网里最快一次通常只有几毫秒）
 const latSamples = [];
+// 本机鼠标写的笔画带的是电脑自己的时间戳，混进来会把“时钟差基准”算错——只统计 iPad 的笔画
+const localStrokeIds = new Set();
+function markLocalStroke(id) {
+  localStrokeIds.add(id);
+  if (localStrokeIds.size > 200) localStrokeIds.delete(localStrokeIds.values().next().value);
+}
 function recordLatency(msg) {
-  if (!msg.ts) return;
+  if (!msg.ts || localStrokeIds.has(msg.id)) return;
   const d = Date.now() - msg.ts;
-  if (d < 0 || d > 5000) return;
+  if (!(Math.abs(d) < 120000)) return; // 时钟差超过 2 分钟时不统计
   latSamples.push(d);
   if (latSamples.length > 300) latSamples.shift();
+}
+function latencyStats() {
+  if (latSamples.length < 5) return null;
+  const s = latSamples.slice().sort((a, b) => a - b), base = s[0];
+  return { p50: Math.round(percentile(s, 0.5) - base), p95: Math.round(percentile(s, 0.95) - base) };
 }
 function percentile(sorted, q) {
   return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * q))];
 }
 setInterval(() => {
   const el = document.getElementById("latency");
-  if (!latSamples.length) { I18N.bind(el, "pc.latencyNone"); return; }
-  const s = latSamples.slice().sort((a, b) => a - b);
-  const p50 = Math.round(percentile(s, 0.5)), p95 = Math.round(percentile(s, 0.95));
+  const st = latencyStats();
+  if (!st) { I18N.bind(el, "pc.latencyNone"); return; }
+  const p50 = st.p50, p95 = st.p95;
   I18N.bind(el, "pc.latency", { a: p50, b: p95 });
   el.style.color = p95 > 200 ? "#e5484d" : p95 > 100 ? "#f76b15" : "";
 }, 1000);
@@ -186,6 +198,7 @@ canvas.addEventListener("pointerdown", (e) => {
   const [x, y] = s2v(e.offsetX, e.offsetY);
   if (x < 0 || x > 1 || y < 0 || y > 1) return;
   const id = WB.newId();
+  markLocalStroke(id);
   const tool = pcui.tool(), ps = Ink.pcStroke(tool);
   mouseStroke = { id, pointerId: e.pointerId, sampler: WB.pointSampler(), input: ps.input, eraser: tool.kind === "eraser",
                   rect: canvas.getBoundingClientRect(), lastP: null };
@@ -487,7 +500,8 @@ async function init() {
   const capVis = document.getElementById("capture-visible");
   let savedCap = null;
   try { savedCap = localStorage.getItem("wb_capture_visible"); } catch (e) {}
-  capVis.checked = savedCap === "1" ? await invoke("set_capture_visible", { visible: true }) : await invoke("get_capture_visible");
+  // v1.0.2 起默认打开；用户关过（"0"）或开过（"1"）就按上次的选择
+  capVis.checked = savedCap === "0" || savedCap === "1" ? await invoke("set_capture_visible", { visible: savedCap === "1" }) : await invoke("get_capture_visible");
   capVis.addEventListener("change", async () => {
     capVis.checked = await invoke("set_capture_visible", { visible: capVis.checked });
     try { localStorage.setItem("wb_capture_visible", capVis.checked ? "1" : "0"); } catch (e) {}

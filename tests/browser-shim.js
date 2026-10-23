@@ -119,7 +119,7 @@ const invoke = async (command, args) => {
     case 'discard_captured_screenshot': return;
     case 'get_preview_allowed': return TEST.previewAllowed !== false;
     case 'set_preview_allowed': TEST.previewAllowed = args.allowed; return args.allowed;
-    case 'get_capture_visible': return TEST.captureVisible || false;
+    case 'get_capture_visible': return TEST.captureVisible ?? true; // v1.0.2：后端默认打开
     case 'set_capture_visible': TEST.captureVisible = args.visible; return args.visible;
     case 'get_annotate_pads': return 0;
     default: throw new Error('Unexpected IPC: ' + command);

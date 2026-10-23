@@ -525,8 +525,8 @@
       case "preview-meta":
         pendingMeta = msg;
         frameInk = !!msg.ink;
-        if (frameInk && !inkNoticeShown) { inkNoticeShown = true; notice(T("pad.inkInFrame"), 9000); }
-        if (!frameInk) inkNoticeShown = false;
+        // v1.0.2：“录屏/共享时显示标注”默认打开后，这条说明每台 iPad 只提示一次
+        if (frameInk && !inkNoticeShown && store("wb_inkframe_seen") !== "1") { inkNoticeShown = true; store("wb_inkframe_seen", "1"); notice(T("pad.inkInFrame"), 9000); }
         return;
       case "preview-same": previewWaiting = false; requestPreview(false, 700); return;
       case "preview-off":

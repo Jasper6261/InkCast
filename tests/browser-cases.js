@@ -180,7 +180,13 @@ async function runBrowserCases(page) {
       T.assert(T.calls.some(c => c.command === 'set_overlay_shortcut' && c.args.shortcut === 'Ctrl+Alt+Q'), 'the shortcut can be changed from Settings');
       TEST.status.shortcut = 'Ctrl+Alt+Shift+A';
       const cap = document.getElementById('capture-visible');
-      T.assert(cap && !cap.checked, 'recording visibility toggle defaults off (annotations hidden from capture)');
+      T.assert(cap && cap.checked && !T.calls.some(c => c.command === 'set_capture_visible'),
+        'v1.0.2: “show annotations in recordings / screen sharing” is on by default (nothing saved yet)');
+      T.assert(document.getElementById('capture-visible').closest('label, .row, div').textContent.length > 0 &&
+        /默认打开/.test(document.body.innerHTML), 'v1.0.2: the setting explains it is on by default');
+      cap.checked = false; cap.dispatchEvent(new Event('change')); await T.settle();
+      T.assert(T.calls.some(c => c.command === 'set_capture_visible' && c.args && c.args.visible === false) && localStorage.getItem('wb_capture_visible') === '0',
+        'v1.0.2: turning it off is remembered');
       cap.checked = true; cap.dispatchEvent(new Event('change')); await T.settle();
       T.assert(T.calls.some(c => c.command === 'set_capture_visible' && c.args && c.args.visible === true), 'toggle invokes set_capture_visible');
       cap.checked = false; cap.dispatchEvent(new Event('change')); await T.settle();
@@ -305,6 +311,14 @@ async function runBrowserCases(page) {
           'v1.0.1: a real disconnect shows "iPad not connected" after a moment, without the connect card');
         T.receive(view, { t: 'pad-status', online: 1 });
         T.assert(pill.classList.contains('on'), 'v1.0.1: reconnecting shows connected again');
+        // v1.0.2：iPad 时钟比电脑慢 1.3 秒时，延迟不能显示成 1300ms——扣掉两台设备的时钟差
+        // 统计窗口 300 个点：同一台 iPad 的时钟差恒定，发满一个窗口
+        T.receive(view, { t: 'stroke-start', id: 'lat1', color: '#000000', size: 4, tool: 'pen' });
+        for (let i = 0; i < 320; i++) T.receive(view, { t: 'stroke-point', id: 'lat1', x: 0.1 + (i % 60) * 0.01, y: 0.2, p: 0.5, ts: Date.now() - 1300 - (i % 4) * 10 });
+        T.receive(view, { t: 'stroke-end', id: 'lat1' });
+        await new Promise(r => setTimeout(r, 1200));
+        const lat = document.getElementById('latency').textContent, m = lat.match(/p50 (-?\d+)ms \/ p95 (-?\d+)ms/);
+        T.assert(m && +m[1] >= 0 && +m[1] < 100 && +m[2] < 100, 'v1.0.2: latency excludes the clock difference between iPad and PC (' + lat + ')');
       }
       await click('btn-about'); await T.settle(); await T.settle();
       T.assert(!document.getElementById('about-modal').classList.contains('hidden') && document.getElementById('about-version').textContent.includes('0.8.0') &&
@@ -1361,7 +1375,8 @@ async function runPadSyncCases() {
     let r0 = reqs();
     cur().onmessage({ data: JSON.stringify({ t: 'preview-meta', w: 1600, h: 1000, fw: 160, fh: 100, ink: true }) });
     cur().onmessage({ data: red });
-    T.assert(/录屏\/共享时显示标注/.test(document.getElementById('notice').textContent), 'v0.8.12: when the screen image contains the annotations, the iPad explains it once');
+    T.assert(/录屏\/共享时显示标注/.test(document.getElementById('notice').textContent) && localStorage.getItem('wb_inkframe_seen') === '1',
+      'v0.8.12 / v1.0.2: when the screen image contains the annotations, the iPad explains it once (remembered on this iPad)');
     T.assert(await waitReq(r0, 3000) >= 0, 'v0.8.12: the next frame is requested after the ink frame');
     cur().onmessage({ data: JSON.stringify({ t: 'preview-same' }) });
     await new Promise(r => setTimeout(r, 50));

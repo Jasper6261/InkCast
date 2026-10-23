@@ -1,4 +1,4 @@
-//! InkCast（墨投）v1.0.1 — Windows / macOS 桌面端。
+//! InkCast（墨投）v1.0.2 — Windows / macOS 桌面端。
 //!
 //! 双监听：
 //!   - loopback（127.0.0.1:0，常开）：只给本机 viewer 用，hostToken 经 Tauri command 下发。
@@ -247,7 +247,7 @@ impl Hooks {
     pub(crate) fn new() -> Self {
         Self {
             preview_allowed: AtomicBool::new(true),
-            capture_visible: AtomicBool::new(false),
+            capture_visible: AtomicBool::new(true), // v1.0.2：默认打开，录屏 / 会议共享里能看到标注
             persist_lan: AtomicBool::new(false),
             pen_size: std::sync::atomic::AtomicU32::new(6.0f32.to_bits()),
             annotate_pads: AtomicUsize::new(0),

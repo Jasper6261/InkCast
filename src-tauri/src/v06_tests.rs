@@ -120,10 +120,10 @@ mod v06 {
         assert_eq!(got, &tools[..7], "未知画笔与非法字符的 v2 参数串不应被接受");
     }
 
-    /// 录屏可见开关默认关闭（标注层对屏幕截取隐身）
+    /// v1.0.2：录屏可见开关默认打开（录屏、会议共享里能看到标注；以前默认关闭，用户录屏时标注丢失）
     #[test]
-    fn capture_visible_defaults_off() {
-        assert!(!Hooks::new().capture_visible.load(Ordering::SeqCst));
+    fn capture_visible_defaults_on() {
+        assert!(Hooks::new().capture_visible.load(Ordering::SeqCst));
     }
 
     /// v0.8.12：屏幕画面的 preview-meta 带 ink 标记——“录屏/共享时显示标注”打开时画面里含标注层

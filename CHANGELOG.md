@@ -1,5 +1,18 @@
 # 更新记录 / Changelog
 
+## 1.0.2 — 2026-10-23
+
+- **“录屏/共享时显示标注”默认打开：**录屏（OBS、Xbox Game Bar、截图工具）和会议共享里默认就能看到屏幕标注。以前默认关闭，录屏时标注会丢失。关掉后标注对录屏和共享隐身；设置会记住你的选择。iPad 上关于“画面里带着标注”的说明，每台 iPad 只提示一次。
+- **延迟显示更准：**电脑底部的“延迟 p50 / p95”以前把 iPad 和电脑的时钟差也算进去了（时钟差 1 秒就显示 1000ms 以上，并标红）。现在扣掉时钟差，只统计 iPad 的笔画。
+- **提示文字：**底部提示改为“iPad 默认进入白板”；设置和使用说明里关于这个开关的说明同步更新（8 种语言）。
+- **README：**加入白板和屏幕标注的演示动图。
+
+---
+
+- **“Show annotations in recordings/screen sharing” is now on by default**, so recordings and meeting shares include your ink. Turning it off is remembered.
+- **Latency readout** no longer includes the clock difference between the iPad and the PC.
+- Updated hints and the built-in guide; demo GIFs in the README.
+
 ## 1.0.1 — 2026-10-23
 
 - **连接更顺：**电脑开着 VPN / 代理软件（v2rayN、Clash 的 TUN 模式）或装了 WSL、Docker 时，以前二维码里可能是虚拟网卡的地址（如 `172.18.0.1`），iPad 打不开。现在优先用 WLAN / 以太网的地址；“换一个网络地址”里显示网卡名，并标出“虚拟网卡 / VPN”；选到虚拟网卡时会提示。“iPad 打不开页面？”里新增 VPN / 代理的说明。
