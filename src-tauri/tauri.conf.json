@@ -1,0 +1,46 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "app": {
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ipc: http://ipc.localhost ws://127.0.0.1:*; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    },
+    "windows": [
+      {
+        "height": 800,
+        "minHeight": 600,
+        "minWidth": 800,
+        "title": "InkCast",
+        "width": 1280
+      }
+    ],
+    "withGlobalTauri": true,
+    "macOSPrivateApi": true
+  },
+  "build": {
+    "beforeBuildCommand": "",
+    "beforeDevCommand": "",
+    "frontendDist": "../src"
+  },
+  "bundle": {
+    "active": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "targets": "all",
+    "category": "Productivity",
+    "shortDescription": "Write on your computer screen with iPad and Apple Pencil",
+    "longDescription": "InkCast turns an iPad and Apple Pencil into a wireless pen display for your computer: annotate on top of any window or write on a whiteboard, over your local network.",
+    "copyright": "© 2026 InkCast",
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "signingIdentity": "-"
+    }
+  },
+  "identifier": "com.inkcast.app",
+  "productName": "InkCast",
+  "version": "1.0.0"
+}

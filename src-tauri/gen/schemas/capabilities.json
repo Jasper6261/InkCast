@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"主窗口 + 标注层：保存/打开对话框、读写文件","local":true,"windows":["main","overlay"],"permissions":["core:default","dialog:allow-save","dialog:allow-open","fs:allow-write-file","fs:allow-read-file","dialog:allow-message"]}}

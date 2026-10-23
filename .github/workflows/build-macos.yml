@@ -1,0 +1,50 @@
+# 在 GitHub 的 Mac 编译机上打包 InkCast（墨投）Mac 版：Apple 芯片 + Intel 通用安装包（.dmg）。
+# 触发：在 GitHub 网页的 Actions 页点 “Run workflow”，或推送 v 开头的标签（如 v0.8.0）。
+# 产物：Actions 运行页面底部的 “InkCast-macos” 压缩包，里面是 .dmg 和 .app。
+# 说明：
+#   - 目前使用临时签名（ad-hoc），没有苹果开发者证书。用户第一次打开需要右键 → 打开，或在“系统设置 › 隐私与安全性”里点“仍要打开”。
+#   - 有了苹果开发者账号（每年 99 美元）后，把证书和公证信息加到仓库的 Secrets，再启用下面注释掉的签名步骤即可正式签名和公证。
+#   - 只用 GitHub 官方 actions 和 Tauri 官方命令行工具；依赖版本由 Cargo.lock 锁定（--locked）。
+name: build-macos
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  macos:
+    runs-on: macos-14
+    timeout-minutes: 60
+    steps:
+      # 第三方 Action 固定到提交哈希（防止标签被改指向）
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Rust targets
+        run: |
+          rustup update stable
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+      - name: Tauri CLI (official, version pinned)
+        run: cargo install tauri-cli --version 2.12.3 --locked
+      - name: Rust tests
+        working-directory: src-tauri
+        run: cargo test --locked
+      - name: Build universal app
+        working-directory: src-tauri
+        run: cargo tauri build --target universal-apple-darwin
+        # 正式签名和公证（需要苹果开发者账号）：在仓库 Secrets 里配置以下变量后取消注释
+        # env:
+        #   APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+        #   APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        #   APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        #   APPLE_ID: ${{ secrets.APPLE_ID }}
+        #   APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+        #   APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: InkCast-macos
+          path: |
+            src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+            src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app
+          if-no-files-found: error

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title data-i18n="pad.title">无线白板 · iPad</title>
+<style>
+  :root {
+    --chrome: rgba(30,30,33,.84); --chrome-solid: #1f1f22; --line: rgba(255,255,255,.09);
+    --text: #f2f2f4; --muted: #9b9ba3; --accent: #4c7dff; --teal: #2fe3cf; --danger: #ff6b6b;
+    --safe-t: env(safe-area-inset-top); --safe-l: env(safe-area-inset-left); --safe-r: env(safe-area-inset-right); --safe-b: env(safe-area-inset-bottom);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+  body { font-family: -apple-system, "SF Pro Text", "PingFang SC", "Hiragino Sans", "Apple SD Gothic Neo", sans-serif; background: #161618; color: var(--text); -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; }
+  canvas.layer { position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; -webkit-user-select: none; user-select: none; }
+  #live { pointer-events: auto; }
+  #bg, #ink { pointer-events: none; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  /* 浮动工具组（类似 Procreate）：半透明深色胶囊，图标按钮 */
+  .cluster { position: fixed; top: calc(10px + var(--safe-t)); z-index: 5; display: flex; align-items: center; gap: 2px; padding: 4px;
+    background: var(--chrome); -webkit-backdrop-filter: blur(20px) saturate(150%); backdrop-filter: blur(20px) saturate(150%);
+    border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 6px 22px rgba(0,0,0,.28); }
+  #bar-left { left: calc(10px + var(--safe-l)); }
+  #toolbar { right: calc(10px + var(--safe-r)); }
+  .ib { flex: none; width: 46px; height: 46px; border: 0; background: transparent; border-radius: 12px; display: grid; place-items: center; color: #d9d9de; }
+  .ib svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .ib:active { background: rgba(255,255,255,.08); }
+  .ib.active { color: var(--accent); }
+  .ib:disabled { opacity: .3; }
+  #btn-menu svg { width: 30px; height: 30px; stroke: none; }
+  .div { width: 1px; height: 26px; background: var(--line); margin: 0 4px; }
+  .seg { display: flex; background: rgba(0,0,0,.28); border-radius: 11px; padding: 3px; gap: 2px; }
+  .seg button { height: 38px; min-width: 64px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-size: 15px; font-weight: 500; }
+  .seg button.on { background: rgba(255,255,255,.14); color: var(--text); }
+  #custom-color { width: 46px; height: 46px; border: 0; background: transparent; border-radius: 12px; display: grid; place-items: center; }
+  #custom-color::after { content: ""; width: 30px; height: 30px; border-radius: 50%; background: var(--c, #e5484d); box-shadow: 0 0 0 2px rgba(255,255,255,.9), 0 0 0 3px rgba(0,0,0,.35); }
+  #conn { position: fixed; top: calc(18px + var(--safe-t)); z-index: 4; left: calc(var(--left-w, 300px) + 20px + var(--safe-l));
+    display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); background: var(--chrome); border: 1px solid var(--line); border-radius: 15px; padding: 6px 12px 6px 10px; pointer-events: none;
+    -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); white-space: nowrap; max-width: calc(100vw - var(--left-w, 300px) - 300px); overflow: hidden; text-overflow: ellipsis; }
+  #conn::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #f5a524; flex: none; }
+  #conn.on { color: var(--text); }
+  #conn.on::before { background: #3ecf8e; }
+  #messages { position: fixed; z-index: 6; left: 50%; transform: translateX(-50%); top: calc(70px + var(--safe-t)); display: flex; flex-direction: column; gap: 6px; align-items: center; max-width: min(640px, 80vw); pointer-events: none; }
+  #notice:empty, #usage[hidden] { display: none; }
+  #notice, #usage { font-size: 14px; background: rgba(30,30,33,.92); color: var(--text); padding: 8px 14px; border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 6px 20px rgba(0,0,0,.3); }
+  #usage[data-level="warning"] { color: #ffd479; }
+  #usage[data-level="critical"], #usage[data-level="full"] { background: #5c2020; color: #fff; font-weight: 600; }
+  /* 左侧：笔头大小 + 撤销 / 重做 */
+  #sidebar { position: fixed; left: calc(10px + var(--safe-l)); top: 50%; transform: translateY(-50%); z-index: 5; width: 54px; padding: 12px 4px 4px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    background: var(--chrome); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 6px 22px rgba(0,0,0,.28); }
+  #sizebar { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0; touch-action: none; user-select: none; -webkit-user-select: none; }
+  #size-track { position: relative; width: 6px; height: min(260px, 38vh); background: rgba(255,255,255,.12); border-radius: 3px; }
+  #size-fill { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,.55); border-radius: 3px; }
+  #size-thumb { position: absolute; left: 50%; width: 30px; height: 22px; margin: -11px 0 0 -15px; border-radius: 7px; background: #f4f4f6; box-shadow: 0 1px 6px rgba(0,0,0,.45); }
+  #size-val { width: 44px; height: 30px; box-sizing: border-box; padding: 0 2px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.06);
+    color: var(--text); font-family: inherit; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: center; -webkit-user-select: text; user-select: text; }
+  #size-val:focus { outline: none; border-color: var(--accent); background: rgba(76,125,255,.15); }
+  #sidebar .ib { width: 46px; height: 44px; }
+  #sidebar .sb-sep { width: 28px; height: 1px; background: var(--line); margin: 2px 0; }
+  #btn-quickclear { color: #ff8a80; }
+  /* 清除后的“撤销”提示条（可以点） */
+  #undo-toast { position: fixed; z-index: 7; left: 50%; transform: translateX(-50%); bottom: calc(22px + var(--safe-b)); display: flex; align-items: center; gap: 14px;
+    background: rgba(30,30,33,.95); color: var(--text); border: 1px solid var(--line); border-radius: 14px; padding: 8px 8px 8px 16px; font-size: 15px; box-shadow: 0 8px 26px rgba(0,0,0,.4); }
+  #undo-toast[hidden] { display: none; }
+  #undo-toast button { height: 40px; min-width: 76px; border: 0; border-radius: 10px; background: var(--accent); color: #fff; font-size: 16px; font-weight: 500; padding: 0 14px; }
+  #size-preview { position: fixed; left: calc(80px + var(--safe-l)); top: 50%; transform: translateY(-50%); z-index: 6; width: 120px; height: 120px; border-radius: 16px;
+    background: rgba(250,250,248,.96); display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 22px rgba(0,0,0,.4); pointer-events: none; }
+  #size-preview[hidden] { display: none; }
+  .ib[hidden], .cluster .div[hidden] { display: none; }
+  #size-preview div { border-radius: 50%; background: #1a1a1a; }
+  /* 弹出面板：从工具组下方展开 */
+  .pop { position: fixed; z-index: 7; top: calc(70px + var(--safe-t)); background: rgba(30,30,33,.96); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px);
+    border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 14px 40px rgba(0,0,0,.45); }
+  .pop[hidden] { display: none !important; }
+  #brushes { right: calc(10px + var(--safe-r)); width: min(560px, calc(100vw - 20px)); padding: 10px; display: grid; gap: 6px;
+    max-height: calc(var(--app-h, 100vh) - 90px - var(--safe-t) - var(--safe-b)); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }
+  #picker { right: calc(10px + var(--safe-r)); width: 312px; padding: 14px 16px 12px; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .pk-swatches { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; margin-bottom: 12px; }
+  .pk-swatches .swatch { width: 28px; height: 28px; border-radius: 50%; border: 0; padding: 0; justify-self: center; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+  .pk-swatches .swatch.active { box-shadow: 0 0 0 2px #1f1f22, 0 0 0 4px #fff; }
+  #appmenu { left: calc(10px + var(--safe-l)); width: 300px; padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+  .menu-brand { display: flex; align-items: center; gap: 10px; padding: 8px 10px 12px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+  .menu-brand svg { width: 34px; height: 34px; }
+  .menu-brand b { font-size: 17px; font-weight: 600; }
+  .menu-brand small { display: block; color: var(--muted); font-size: 12px; font-weight: 400; }
+  .mi { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 0 12px; border: 0; background: transparent; border-radius: 12px; font-size: 16px; text-align: left; color: var(--text); }
+  .mi:active { background: rgba(255,255,255,.08); }
+  .mi svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; color: var(--muted); flex: none; }
+  .mi .mi-val { margin-left: auto; color: var(--muted); font-size: 14px; }
+  .mi .sw { margin-left: auto; width: 44px; height: 26px; border-radius: 13px; background: rgba(255,255,255,.18); position: relative; flex: none; transition: background .15s; }
+  .mi .sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .15s; }
+  .mi.active .sw { background: #3ecf8e; }
+  .mi.active .sw::after { transform: translateX(18px); }
+  .mi.danger { color: var(--danger); }
+  .mi.danger svg { color: var(--danger); }
+  .mi-sep { height: 1px; background: var(--line); margin: 4px 6px; }
+  #langmenu { left: calc(320px + var(--safe-l)); display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 10px; }
+  #langmenu button { height: 48px; min-width: 132px; border-radius: 12px; border: 0; background: rgba(255,255,255,.06); color: var(--text); font-size: 16px; }
+  #langmenu button.active { background: var(--accent); color: #fff; }
+  #help { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(520px, calc(100vw - 40px)); padding: 22px 24px 18px; }
+  #help h2 { font-size: 20px; font-weight: 600; margin-bottom: 14px; }
+  #help ul { list-style: none; display: grid; gap: 12px; margin-bottom: 18px; }
+  #help li { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: start; font-size: 15px; line-height: 1.45; color: #dcdce1; }
+  #help li svg { width: 26px; height: 26px; fill: none; stroke: var(--accent); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  #help-ok { width: 100%; height: 48px; border: 0; border-radius: 12px; background: var(--accent); color: #fff; font-size: 17px; font-weight: 500; }
+  #tune { position: fixed; right: calc(10px + var(--safe-r)); top: calc(70px + var(--safe-t)); z-index: 6;
+    width: min(440px, calc(100vw - 20px)); max-height: calc(var(--app-h, 100vh) - 86px - var(--safe-t) - var(--safe-b)); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y;
+    background: rgba(30,30,33,.97); border: 1px solid var(--line); border-radius: 18px; padding: 10px 12px 18px; box-shadow: 0 14px 40px rgba(0,0,0,.45); font-size: 14px; }
+  #tune[hidden] { display: none; }
+  .tune-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .tune-head b { font-size: 15px; }
+  #brushes button {
+    display: grid; grid-template-columns: 96px 1fr 170px; align-items: center; gap: 10px; text-align: left;
+    background: rgba(255,255,255,.04); border: 1px solid transparent; color: #eee; border-radius: 12px; padding: 6px 10px; font-size: 15px;
+  }
+  #brushes button.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: #26344a; }
+  #brushes b { font-size: 16px; }
+  #brushes small { display: block; color: #aaa; font-size: 12px; line-height: 1.35; }
+  #brushes canvas { width: 170px; height: 44px; background: #fbfbf8; border-radius: 8px; }
+  @media (max-width: 560px) { #brushes button { grid-template-columns: 80px 1fr 110px; } #brushes canvas { width: 110px; } }
+  .menu-foot { display: flex; justify-content: flex-end; }
+  .menu-foot button { display: block !important; background: var(--accent) !important; border-color: var(--accent) !important; color: #fff; font-size: 15px; }
+  .tune-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .tune-head b { font-size: 15px; }
+  .tune-head .pr { flex: 1; color: #47c27a; font-size: 12px; }
+  #tune button { background: #34343a; color: #eee; border: 1px solid #55555c; border-radius: 8px; height: 40px; padding: 0 14px; font-size: 15px; }
+  .tune-row { display: grid; grid-template-columns: 100px 1fr 44px; align-items: center; gap: 4px 8px; padding: 5px 0; border-top: 1px solid #333; }
+  .tune-row small { grid-column: 1 / -1; color: #999; font-size: 11px; }
+  .tune-row input { width: 100%; }
+  .tune-row output { text-align: right; color: #ccc; font-variant-numeric: tabular-nums; }
+  .tune-foot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .tune-foot textarea { width: 100%; height: 80px; font-size: 11px; background: #111; color: #ccc; border: 1px solid #444; border-radius: 6px; }
+  .tune-note { color: #ccc; line-height: 1.5; }
+  .tune-head .tag { font-style: normal; font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #2e4a33; color: #8fe0a5; }
+  .tune-head .tag.mod { background: #4a3d22; color: #f0c674; }
+  .tune-head b { flex: 1; }
+  #tune .pr { color: #47c27a; font-size: 12px; margin: 0 0 6px; }
+  .testpad { position: sticky; top: -10px; z-index: 2; margin: 2px -12px 6px; padding: 6px 12px; background: rgb(30,30,33); }
+  .testpad canvas { display: block; width: 100%; height: 170px; background: #fbfbf8; border-radius: 10px; touch-action: none; }
+  .testpad .tp-hint { position: absolute; left: 26px; right: 90px; top: 50%; transform: translateY(-50%); color: #999; font-size: 13px; line-height: 1.4; pointer-events: none; }
+  .testpad .tp-hint[hidden] { display: none; }
+  .testpad button { position: absolute; right: 18px; bottom: 12px; }
+  .tune-sec { margin: 12px 0 2px; color: #8ab4f8; font-size: 13px; font-weight: 600; letter-spacing: .05em; }
+  .tune-row { grid-template-columns: 104px 1fr 44px 36px !important; }
+  .tune-row .rs { height: 30px !important; padding: 0 !important; width: 34px; font-size: 16px !important; }
+  .tune-row .rs[hidden] { visibility: hidden; display: block; }
+  .tune-row.changed .nm { color: #f0c674; }
+  .tune-name { display: flex; gap: 8px; margin-top: 8px; }
+  .tune-name[hidden] { display: none; }
+  .tune-name input { flex: 1; min-width: 0; height: 40px; font-size: 16px; border-radius: 8px; border: 1px solid #55555c; background: #111; color: #eee; padding: 0 10px; }
+  #tune button.armed, #tune button.danger.armed { background: #c0392b; border-color: #e5484d; color: #fff; }
+  #tune button.danger { color: #ff8a80; }
+  #tune button:disabled { opacity: .45; }
+  .tune-tip { color: #999; font-size: 11px; line-height: 1.45; flex-basis: 100%; }
+  .menu-sec { color: #8ab4f8; font-size: 13px; font-weight: 600; padding: 6px 4px 0; }
+  #picker canvas { display: block; width: 280px; border-radius: 10px; touch-action: none; }
+  #pk-sv { height: 190px; }
+  #pk-hue { height: 34px; margin-top: 12px; border-radius: 17px; }
+  .pk-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+  #pk-preview { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #fff; flex: none; }
+  #pk-hex { flex: 1; color: #ddd; font: 16px ui-monospace, Menlo, monospace; }
+  #pk-done { height: 44px; min-width: 76px; border-radius: 12px; background: var(--accent); color: #fff; border: 0; font-size: 17px; }
+  .pk-recent-title { color: #999; font-size: 12px; margin: 12px 0 6px; }
+  #pk-recent { display: flex; gap: 10px; flex-wrap: wrap; min-height: 36px; }
+  #pk-recent button { width: 36px; height: 36px; border-radius: 50%; border: 2px solid #666; padding: 0; }
+  #guide { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; background: #F4F0E6; padding-top: var(--safe-t); }
+  #guide[hidden] { display: none; }
+  #guide .guide-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px calc(12px + var(--safe-r)) 8px calc(16px + var(--safe-l)); background: var(--chrome-solid); color: var(--text); font-size: 16px; }
+  #guide .guide-bar button { height: 40px; min-width: 72px; border: 0; border-radius: 10px; background: var(--accent); color: #fff; font-size: 16px; font-weight: 500; }
+  #guide iframe { flex: 1; width: 100%; border: 0; }
+</style>
+</head>
+<body>
+  <canvas id="bg" class="layer"></canvas>
+  <canvas id="ink" class="layer"></canvas>
+  <canvas id="live" class="layer"></canvas>
+  <div id="bar-left" class="cluster">
+    <button id="btn-menu" class="ib" data-i18n-title="menu.title" data-i18n-aria="menu.title" title="菜单"><svg viewBox="140 120 760 760" aria-hidden="true"><defs><linearGradient id="lg-ink" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#4A63FF"/><stop offset="1" stop-color="#2FE3CF"/></linearGradient></defs><g transform="translate(74 18) rotate(-35 512 560)"><path d="M512 860 L382 560 C370 532,376 506,396 488 L450 440 L574 440 L628 488 C648 506,654 532,642 560 Z" fill="url(#lg-ink)"/><path d="M512 856 L512 600" stroke="#1f1f22" stroke-width="18" stroke-linecap="round"/><circle cx="512" cy="584" r="32" fill="#1f1f22"/><rect x="436" y="380" width="152" height="72" rx="18" fill="#E9ECF2"/><path d="M412 300 A140 140 0 0 1 612 300" fill="none" stroke="#F4F5F8" stroke-width="44" stroke-linecap="round"/><path d="M340 216 A250 250 0 0 1 684 216" fill="none" stroke="#F4F5F8" stroke-opacity=".5" stroke-width="44" stroke-linecap="round"/></g></svg></button>
+    <div class="div"></div>
+    <div class="seg" id="mode-seg" role="tablist" data-i18n-title="pad.modeTitle" title="切换 屏幕标注 / 白板">
+      <button type="button" data-mode="annotate" data-i18n="seg.screen">屏幕</button>
+      <button type="button" data-mode="board" data-i18n="seg.board">白板</button>
+    </div>
+    <div class="div" id="div-screen"></div>
+    <button id="btn-preview" class="ib active" data-i18n-title="pad.previewTitle" data-i18n-aria="pad.previewTitle" title="显示电脑屏幕画面"><svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M9 20h6M12 16.5V20"/></svg></button>
+    <button id="btn-shot" class="ib" data-i18n-title="pad.shotTitle" data-i18n-aria="pad.shotTitle" title="在电脑上保存“屏幕 + 标注”截图"><svg viewBox="0 0 24 24"><path d="M4 8.5A1.5 1.5 0 015.5 7h2.2l1.5-2h5.6l1.5 2h2.2A1.5 1.5 0 0120 8.5v9a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 014 17.5z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+  </div>
+  <div id="conn" data-i18n="conn.connecting">连接中…</div>
+  <div id="messages" aria-live="polite">
+    <div id="usage" hidden></div>
+    <div id="notice"></div>
+  </div>
+  <div id="toolbar" class="cluster">
+    <button id="t-pen" class="ib active" data-i18n-title="pad.penTitle" title="书写画笔（点开可换画笔、调节手感）"><svg viewBox="0 0 24 24"><path d="M14.5 4.5l5 5-7 7-5-5z"/><path d="M7.5 11.5c-3 0-4 2.5-4 4.5 0 2-1 3-1 3s5 .5 7-1.5c1.2-1.2 1.5-2.5 1.5-3.5"/></svg><span id="brush-name" class="sr">签字笔</span></button>
+    <button id="t-marker" class="ib" data-i18n-title="pad.markerTitle" data-i18n-aria="pad.marker" title="荧光笔（半透明，划重点）"><svg viewBox="0 0 24 24"><path d="M14 4l6 6-7.5 7.5H8.5V13.5z"/><path d="M8.5 17.5L6 20H3l2.5-2.5"/><path d="M11 7l6 6"/></svg></button>
+    <button id="t-eraser" class="ib" data-i18n-title="tool.eraser" data-i18n-aria="tool.eraser" title="橡皮擦"><svg viewBox="0 0 24 24"><path d="M8 20h12"/><path d="M4.6 15.4l9.8-9.8a2 2 0 012.8 0l2.2 2.2a2 2 0 010 2.8L11 19H8.2z"/><path d="M9 11l5 5"/></svg></button>
+    <button id="custom-color" data-i18n-title="color.picker" data-i18n-aria="color.pickerShort" title="色盘：选择任意颜色"></button>
+  </div>
+  <div id="sidebar">
+    <div id="sizebar" data-i18n-title="pad.sizeTitle" title="笔头大小：上下拖动无级调节">
+      <div id="size-track"><div id="size-fill"></div><div id="size-thumb"></div></div>
+    </div>
+    <input id="size-val" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" data-i18n-title="pad.sizeInput" data-i18n-aria="pad.sizeInput" title="输入笔头大小">
+    <button id="btn-undo" class="ib" data-i18n-title="pad.undoTitle" data-i18n-aria="tool.undo" title="撤销（也可双指轻点）"><svg viewBox="0 0 24 24"><path d="M9 7L5 11l4 4"/><path d="M5 11h9a5 5 0 010 10h-2"/></svg></button>
+    <button id="btn-redo" class="ib" data-i18n-title="pad.redoTitle" data-i18n-aria="pad.redo" title="重做" disabled><svg viewBox="0 0 24 24"><path d="M15 7l4 4-4 4"/><path d="M19 11h-9a5 5 0 000 10h2"/></svg></button>
+    <div class="sb-sep"></div>
+    <button id="btn-quickclear" class="ib" data-i18n-title="pad.quickClearTitle" data-i18n-aria="pad.clearAll" title="一键清除全部（清除后可撤销）"><svg viewBox="0 0 24 24"><path d="M4.5 7h15M10 7V4.5h4V7M6.5 7l1 12.5h9l1-12.5"/><path d="M10 11v5M14 11v5"/></svg></button>
+  </div>
+  <div id="undo-toast" hidden role="status"><span id="undo-toast-text"></span><button type="button" id="undo-toast-btn" data-i18n="pad.undoClear">撤销</button></div>
+  <div id="size-preview" hidden><div></div></div>
+  <div id="picker" class="pop" hidden data-i18n-aria="color.pickerShort" aria-label="色盘">
+    <div class="pk-swatches"><button class="swatch" data-color="#e5484d" style="background:#e5484d" data-i18n-title="color.red" title="红"></button><button class="swatch" data-color="#f76b15" style="background:#f76b15" data-i18n-title="color.orange" title="橙"></button><button class="swatch" data-color="#f5b700" style="background:#f5b700" data-i18n-title="color.yellow" title="黄"></button><button class="swatch" data-color="#1f9d55" style="background:#1f9d55" data-i18n-title="color.green" title="绿"></button><button class="swatch" data-color="#2f6fed" style="background:#2f6fed" data-i18n-title="color.blue" title="蓝"></button><button class="swatch" data-color="#8e4ec6" style="background:#8e4ec6" data-i18n-title="color.purple" title="紫"></button><button class="swatch" data-color="#1a1a1a" style="background:#1a1a1a" data-i18n-title="color.black" title="黑"></button><button class="swatch" data-color="#8b8d98" style="background:#8b8d98" data-i18n-title="color.gray" title="灰"></button><button class="swatch" data-color="#ffffff" style="background:#ffffff" data-i18n-title="color.white" title="白"></button></div>
+    <canvas id="pk-sv" width="560" height="380"></canvas>
+    <canvas id="pk-hue" width="560" height="68"></canvas>
+    <div class="pk-row"><span id="pk-preview"></span><span id="pk-hex">#000000</span><button type="button" id="pk-done" data-i18n="common.done">完成</button></div>
+    <div class="pk-recent-title" data-i18n="pad.recent">最近使用</div>
+    <div id="pk-recent"></div>
+  </div>
+  <div id="brushes" class="pop" hidden role="menu" data-i18n-aria="pad.brushMenu" aria-label="选择画笔"></div>
+  <div id="appmenu" class="pop" hidden role="menu" data-i18n-aria="menu.title" aria-label="菜单">
+    <div class="menu-brand"><svg viewBox="140 120 760 760" aria-hidden="true"><defs><linearGradient id="lg-ink-menu" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#4A63FF"/><stop offset="1" stop-color="#2FE3CF"/></linearGradient></defs><g transform="translate(74 18) rotate(-35 512 560)"><path d="M512 860 L382 560 C370 532,376 506,396 488 L450 440 L574 440 L628 488 C648 506,654 532,642 560 Z" fill="url(#lg-ink-menu)"/><path d="M512 856 L512 600" stroke="#1f1f22" stroke-width="18" stroke-linecap="round"/><circle cx="512" cy="584" r="32" fill="#1f1f22"/><rect x="436" y="380" width="152" height="72" rx="18" fill="#E9ECF2"/><path d="M412 300 A140 140 0 0 1 612 300" fill="none" stroke="#F4F5F8" stroke-width="44" stroke-linecap="round"/><path d="M340 216 A250 250 0 0 1 684 216" fill="none" stroke="#F4F5F8" stroke-opacity=".5" stroke-width="44" stroke-linecap="round"/></g></svg><b><span data-i18n="app.name">墨投</span><small id="app-version" data-i18n="menu.tagline">iPad 手写，电脑同步</small></b></div>
+    <button type="button" id="btn-penonly" class="mi" data-i18n-title="pad.penOnlyTitle" title="只用 Apple Pencil 书写，手指只移动画面"><svg viewBox="0 0 24 24"><path d="M3.5 20.5l2-6L16 4a2.1 2.1 0 013 3L8.5 17.5z"/><path d="M14 6l3 3"/></svg><span data-i18n="pad.penOnly">仅笔</span><span class="sw"></span></button>
+    <button type="button" id="btn-fit" class="mi"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span data-i18n="pad.fitTitle">复位缩放</span></button>
+    <button type="button" id="btn-lang" class="mi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 3.5 5.4 3.5 8.5s-1 5.9-3.5 8.5c-2.5-2.6-3.5-5.4-3.5-8.5s1-5.9 3.5-8.5z"/></svg><span data-i18n="lang.label">语言</span><span class="mi-val" id="lang-val"></span></button>
+    <button type="button" id="btn-guide" class="mi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 015.5 4H11v15H5.5A1.5 1.5 0 014 17.5z"/><path d="M20 5.5A1.5 1.5 0 0018.5 4H13v15h5.5a1.5 1.5 0 001.5-1.5z"/><path d="M11 19c0-1 .9-1.5 2-1.5M13 19c0-1-.9-1.5-2-1.5"/></svg><span data-i18n="guide.open">使用说明</span></button>
+    <button type="button" id="btn-help" class="mi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.5 2.5 0 014.8.9c0 1.7-2.4 2.1-2.4 3.6"/><path d="M12 17h.01"/></svg><span data-i18n="help.open">手势与提示</span></button>
+    <div class="mi-sep"></div>
+    <button type="button" id="btn-clear" class="mi danger"><svg viewBox="0 0 24 24"><path d="M4.5 7h15M10 7V4.5h4V7M6.5 7l1 12.5h9l1-12.5"/></svg><span data-i18n="pad.clearAll">清除全部</span></button>
+  </div>
+  <div id="langmenu" class="pop" hidden role="menu" data-i18n-aria="lang.label" aria-label="语言"></div>
+  <div id="help" class="pop" hidden role="dialog" data-i18n-aria="help.title" aria-label="手势与提示">
+    <h2 data-i18n="help.title">手势与提示</h2>
+    <ul>
+      <li><svg viewBox="0 0 24 24"><path d="M3.5 20.5l2-6L16 4a2.1 2.1 0 013 3L8.5 17.5z"/><path d="M14 6l3 3"/></svg><span data-i18n="help.pencil">用 Apple Pencil 书写；检测到 Pencil 后，手指只用来移动画面</span></li>
+      <li><svg viewBox="0 0 24 24"><circle cx="8.5" cy="9" r="3"/><circle cx="15.5" cy="9" r="3"/><path d="M5 18c1-2.5 3-3.5 7-3.5s6 1 7 3.5"/></svg><span data-i18n="help.undo">双指轻点：撤销上一笔；三指轻点：重做</span></li>
+      <li><svg viewBox="0 0 24 24"><path d="M4 4l5 5M20 20l-5-5M4 9V4h5M20 15v5h-5"/></svg><span data-i18n="help.zoom">双指捏合、拖动：放大和移动画面；菜单里的“复位缩放”可回到整屏</span></li>
+      <li><svg viewBox="0 0 24 24"><path d="M14.5 4.5l5 5-7 7-5-5z"/><path d="M7.5 11.5c-3 0-4 2.5-4 4.5 0 2-1 3-1 3s5 .5 7-1.5c1.2-1.2 1.5-2.5 1.5-3.5"/></svg><span data-i18n="help.brush">点右上角的画笔图标换画笔；“画笔工作室”可以调节和新建画笔</span></li>
+      <li><svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M9 20h6M12 16.5V20"/></svg><span data-i18n="help.modes">“屏幕”模式写在电脑屏幕最上层，“白板”模式写在白纸上</span></li>
+    </ul>
+    <button type="button" id="help-ok" data-i18n="help.ok">知道了</button>
+  </div>
+  <div id="tune" hidden aria-label="Brush Studio"></div>
+  <!-- v0.8.13：使用说明（电脑上的 /guide 页面，浮在书写区上面，不离开本页，连接不断） -->
+  <div id="guide" hidden role="dialog" data-i18n-aria="guide.open" aria-label="使用说明">
+    <div class="guide-bar"><b data-i18n="guide.open">使用说明</b><button type="button" id="guide-close" data-i18n="common.close">关闭</button></div>
+    <iframe id="guide-frame" data-i18n-title="guide.open" title="使用说明"></iframe>
+  </div>
+  <script src="/i18n.js"></script>
+  <script src="/shared.js"></script>
+  <script src="/ink.js"></script>
+  <script src="/pad.js"></script>
+</body>
+</html>

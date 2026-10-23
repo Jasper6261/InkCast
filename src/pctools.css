@@ -1,0 +1,58 @@
+/* 墨投 · 电脑端书写工具（主窗口与屏幕标注层共用，与 iPad 同一套浮动工具组）——右上画笔 / 荧光笔 / 橡皮 / 颜色，左侧笔头大小 / 撤销 / 清除 */
+.cluster { position: absolute; z-index: 4; display: flex; align-items: center; gap: 2px; padding: 4px;
+  background: rgba(30,30,33,.92); -webkit-backdrop-filter: blur(20px) saturate(150%); backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(255,255,255,.1); border-radius: 16px; box-shadow: 0 6px 22px rgba(0,0,0,.28); }
+#pc-toolbar { top: 12px; right: 12px; }
+#pc-sidebar { left: 12px; top: 50%; transform: translateY(-50%); flex-direction: column; width: 54px; padding: 12px 4px 4px; gap: 6px; }
+.ib { flex: none; width: 42px; height: 42px; padding: 0; border: 0; background: transparent; border-radius: 11px; display: grid; place-items: center; color: #d9d9de; }
+.ib:hover { background: rgba(255,255,255,.08); }
+.ib svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.ib.active, .ib.active:hover { color: #4c7dff; background: transparent; }
+.ib.danger { color: #ff8a80; }
+.ib:disabled { opacity: .3; cursor: default; }
+#custom-color { width: 42px; height: 42px; padding: 0; border: 0; background: transparent; border-radius: 11px; display: grid; place-items: center; }
+#custom-color::after { content: ""; width: 26px; height: 26px; border-radius: 50%; background: var(--c, #e5484d); box-shadow: 0 0 0 2px rgba(255,255,255,.9), 0 0 0 3px rgba(0,0,0,.35); }
+#custom-color:hover { background: rgba(255,255,255,.08); }
+#sizebar { display: flex; flex-direction: column; align-items: center; padding: 6px 0; cursor: ns-resize; touch-action: none; }
+#size-track { position: relative; width: 6px; height: min(220px, 32vh); background: rgba(255,255,255,.12); border-radius: 3px; }
+#size-fill { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,.55); border-radius: 3px; }
+#size-thumb { position: absolute; left: 50%; width: 28px; height: 20px; margin: -10px 0 0 -14px; border-radius: 7px; background: #f4f4f6; box-shadow: 0 1px 6px rgba(0,0,0,.45); }
+#size-val { width: 44px; height: 28px; padding: 0 2px; border: 1px solid rgba(255,255,255,.1); border-radius: 8px; background: rgba(255,255,255,.06);
+  color: #f2f2f4; font: inherit; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: center; user-select: text; }
+#size-val:focus { outline: none; border-color: #4c7dff; background: rgba(76,125,255,.15); }
+.sb-sep { width: 28px; height: 1px; background: rgba(255,255,255,.1); margin: 2px 0; }
+.tool-pop { position: absolute; z-index: 5; top: 66px; right: 12px; padding: 10px; background: rgba(30,30,33,.97); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 16px; box-shadow: 0 14px 40px rgba(0,0,0,.45); }
+.tool-pop[hidden] { display: none !important; }
+#pc-brushes { width: 460px; display: grid; gap: 6px; }
+#pc-brushes button { height: auto; display: grid; grid-template-columns: 92px 1fr 150px; align-items: center; gap: 10px; text-align: left;
+  background: rgba(255,255,255,.04); border: 1px solid transparent; border-radius: 12px; padding: 6px 10px; }
+#pc-brushes button:hover { background: rgba(255,255,255,.08); }
+#pc-brushes button.active { border-color: #4c7dff; box-shadow: inset 0 0 0 1px #4c7dff; background: #26344a; color: #f2f2f4; }
+#pc-brushes b { font-size: 15px; font-weight: 600; }
+#pc-brushes small { color: #aaa; font-size: 12px; line-height: 1.35; }
+#pc-brushes canvas { width: 150px; height: 40px; background: #fbfbf8; border-radius: 8px; }
+#pc-picker { width: 300px; }
+.pk-swatches { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; }
+.swatch { width: 24px; height: 24px; border-radius: 50%; border: 0; padding: 0; justify-self: center; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+.swatch:hover { box-shadow: inset 0 0 0 1px rgba(255,255,255,.25), 0 0 0 2px rgba(255,255,255,.25); }
+.swatch.active { box-shadow: 0 0 0 2px #1f1f22, 0 0 0 4px #fff; }
+.pk-custom { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.1); color: #a2a2aa; font-size: 13px; cursor: pointer; }
+.pk-custom input { width: 44px; height: 30px; border: 0; padding: 0; background: transparent; cursor: pointer; }
+#undo-toast { position: absolute; z-index: 6; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px;
+  background: rgba(30,30,33,.96); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 6px 6px 6px 14px; box-shadow: 0 8px 26px rgba(0,0,0,.4); }
+#undo-toast[hidden] { display: none; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.tool-pop button, .cluster button { font: inherit; color: #f2f2f4; cursor: pointer; }
+#undo-toast button.primary { height: 34px; padding: 0 14px; border: 0; border-radius: 9px; background: #4c7dff; color: #fff; font-weight: 500; }
+#pc-brushes button { color: #eee; }
+.ib[hidden] { display: none; }
+/* 工具栏模式（屏幕标注层）：所有功能集中在屏幕上方一条 */
+.pct-dock #pc-dock { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 5; gap: 2px; padding: 4px 6px; flex-wrap: nowrap; }
+.pct-dock .div { width: 1px; height: 26px; background: rgba(255,255,255,.12); margin: 0 6px; flex: none; }
+.pct-dock .dock-size { display: flex; align-items: center; gap: 8px; padding: 0 4px; }
+.pct-dock #sizebar { flex-direction: row; padding: 0 6px; cursor: ew-resize; height: 42px; }
+.pct-dock #size-track { width: 110px; height: 6px; }
+.pct-dock #size-fill { top: 0; bottom: 0; left: 0; right: auto; width: 0; }
+.pct-dock #size-thumb { top: 50%; width: 20px; height: 26px; margin: -13px 0 0 -10px; }
+.pct-dock .tool-pop { position: fixed; right: auto; }

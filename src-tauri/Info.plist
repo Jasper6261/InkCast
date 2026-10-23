@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- macOS 15 起，访问局域网设备需要说明用途；iPad 通过局域网连接到本机 -->
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>InkCast uses your local network so your iPad can connect to this Mac. / 墨投通过局域网让 iPad 连接到这台 Mac。</string>
+  <key>NSBonjourServices</key>
+  <array/>
+</dict>
+</plist>

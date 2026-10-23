@@ -1,0 +1,49 @@
+/* 墨投 · 透明标注层：画布全屏透明，工具条为悬浮深色胶囊（与 iPad、主窗口同一套配色） */
+:root {
+  --chrome: rgba(30,30,33,.9); --raised: rgba(255,255,255,.07); --line: rgba(255,255,255,.1);
+  --text: #f2f2f4; --muted: #a2a2aa; --accent: #4c7dff; --ok: #3ecf8e; --warn: #f5a524;
+}
+html, body {
+  margin: 0; padding: 0; width: 100%; height: 100%;
+  overflow: hidden; background: transparent;
+  font-family: "Segoe UI Variable Text", "Segoe UI", -apple-system, "SF Pro Text", "PingFang SC", "Microsoft YaHei", "Hiragino Sans", "Malgun Gothic", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+#board { position: fixed; inset: 0; display: block; cursor: crosshair; }
+#live { position: fixed; inset: 0; display: block; pointer-events: none; }
+/* v0.8.8：穿透模式下屏幕上方只留一条小工具栏（屏幕 | 白板、继续标注），位置和完整工具栏相同 */
+#mini { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 10; gap: 6px; padding: 4px 6px 4px 12px; }
+#mini[hidden] { display: none; }
+#mini .mini-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff5a4e; flex: none; }
+#mini .mini-draw { display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px 0 10px; border: 0; border-radius: 11px;
+  background: #4c7dff; color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+#mini .mini-draw:hover { background: #5d8bff; }
+#mini .mini-draw svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+/* v0.8.6：工具集中在屏幕上方一条（样式见 pctools.css），这里只放标注层自己的部分 */
+#ui #undo-toast { position: fixed; bottom: 70px; color: var(--text); font-size: 14px; }
+.seg { display: flex; padding: 3px; gap: 2px; background: rgba(255,255,255,.06); border-radius: 11px; }
+.seg button { height: 34px; min-width: 56px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font: inherit; font-size: 14px; cursor: pointer; }
+.seg button.on { background: rgba(255,255,255,.16); color: #fff; font-weight: 600; }
+.seg button:not(.on):hover { background: rgba(255,255,255,.08); color: var(--text); }
+#messages { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); z-index: 6; display: flex; flex-direction: column; gap: 6px; align-items: center;
+  max-width: min(640px, 60vw); pointer-events: none; font-size: 13px; }
+#overlay-status, #board-usage, #board-notice:not(:empty) { background: var(--chrome); color: var(--text); padding: 7px 14px; border-radius: 12px; border: 1px solid var(--line);
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+#overlay-status[hidden], #board-usage[hidden] { display: none; }
+#board-notice:empty { display: none; }
+#board-usage[data-level="warning"] { color: #ffd479; }
+#board-usage[data-level="critical"], #board-usage[data-level="full"] { color: #fff; background: #9a3030; font-weight: 600; }
+#hint {
+  position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%);
+  background: var(--chrome); color: var(--text); font-size: 13.5px; line-height: 1.5;
+  padding: 10px 18px; border-radius: 12px; border: 1px solid var(--line); z-index: 10;
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+  max-width: 80vw; pointer-events: none;
+  transition: opacity 0.5s;
+}
+#hint.hidden { opacity: 0; pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) { #hint { transition: none; } }
+/* v0.8.4：当前画笔小标签（画笔、颜色、大小在主窗口里选） */
+.pen-chip { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px 0 10px; border-radius: 9px; background: var(--raised); color: var(--muted); font-size: 12.5px; white-space: nowrap; }
+.pen-chip i { width: 14px; height: 14px; border-radius: 50%; background: var(--c, #e5484d); box-shadow: 0 0 0 1px rgba(255,255,255,.5); }

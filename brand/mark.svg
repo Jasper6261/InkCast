@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="120 80 800 860" width="1024" height="1024"><defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2B2F3A"/>
+      <stop offset="1" stop-color="#121419"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#4A63FF"/>
+      <stop offset="1" stop-color="#2FE3CF"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".09"/>
+      <stop offset=".45" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs><g transform="translate(74 18) rotate(-35 512 560)">
+    <!-- 钢笔笔尖：尖端朝下，中缝 + 透气孔 -->
+    <path d="M512 860
+             L 382 560
+             C 370 532, 376 506, 396 488
+             L 450 440
+             L 574 440
+             L 628 488
+             C 648 506, 654 532, 642 560 Z" fill="url(#ink)"/>
+    <path d="M512 856 L 512 600" stroke="#1C1C1E" stroke-width="16" stroke-linecap="round"/>
+    <circle cx="512" cy="584" r="30" fill="#1C1C1E"/>
+    <rect x="436" y="380" width="152" height="72" rx="18" fill="#E9ECF2"/>
+    <!-- 信号弧：从笔尖顶部发出 -->
+    <path d="M412 300 A 140 140 0 0 1 612 300" fill="none" stroke="#F4F5F8" stroke-width="40" stroke-linecap="round"/>
+    <path d="M340 216 A 250 250 0 0 1 684 216" fill="none" stroke="#F4F5F8" stroke-opacity=".5" stroke-width="40" stroke-linecap="round"/>
+  </g></svg>

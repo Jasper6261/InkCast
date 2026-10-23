@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="app.name">墨投</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="pctools.css">
+</head>
+<body>
+  <header id="toolbar">
+    <div class="brand"><svg viewBox="140 120 760 760" aria-hidden="true"><defs><linearGradient id="lg-a" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#4A63FF"/><stop offset="1" stop-color="#2FE3CF"/></linearGradient></defs><g transform="translate(74 18) rotate(-35 512 560)"><path d="M512 860 L382 560 C370 532,376 506,396 488 L450 440 L574 440 L628 488 C648 506,654 532,642 560 Z" fill="url(#lg-a)"/><path d="M512 856 L512 600" stroke="#1f1f22" stroke-width="18" stroke-linecap="round"/><circle cx="512" cy="584" r="32" fill="#1f1f22"/><rect x="436" y="380" width="152" height="72" rx="18" fill="#E9ECF2"/><path d="M412 300 A140 140 0 0 1 612 300" fill="none" stroke="#F4F5F8" stroke-width="44" stroke-linecap="round"/><path d="M340 216 A250 250 0 0 1 684 216" fill="none" stroke="#F4F5F8" stroke-opacity=".5" stroke-width="44" stroke-linecap="round"/></g></svg><b data-i18n="app.name">墨投</b></div>
+    <!-- v0.8.6：与 iPad 同一个“屏幕 | 白板”切换：屏幕 = 打开屏幕标注层，白板 = 本窗口 -->
+    <div class="seg" id="pc-mode-seg" role="tablist" data-i18n-title="pad.modeTitle" title="切换 屏幕标注 / 白板">
+      <button type="button" id="btn-overlay" data-i18n="seg.screen" data-i18n-title="pc.annotateTitle" title="打开屏幕标注层">屏幕</button>
+      <button type="button" id="seg-board" class="on" data-i18n="seg.board">白板</button>
+    </div>
+    <span id="pad-status" class="pill" data-i18n="pc.padOff">iPad 未连接</span>
+    <span id="annotate-status" class="pill on" data-i18n="pc.annotating" hidden>iPad 屏幕标注中</span>
+    <span id="preview-live" class="pill live" data-i18n="pc.previewLive" hidden>● 屏幕画面发送中</span>
+    <span class="spacer"></span>
+    <button id="btn-export" class="icon" data-i18n-title="pc.export" data-i18n-aria="pc.export" title="导出" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M5 19h14"/></svg></button>
+    <button id="btn-guide" class="icon" data-i18n-title="guide.open" data-i18n-aria="guide.open" title="使用说明"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 015.5 4H11v15H5.5A1.5 1.5 0 014 17.5z"/><path d="M20 5.5A1.5 1.5 0 0018.5 4H13v15h5.5a1.5 1.5 0 001.5-1.5z"/><path d="M11 19c0-1 .9-1.5 2-1.5M13 19c0-1-.9-1.5-2-1.5"/></svg></button>
+    <button id="btn-settings" class="icon" data-i18n-title="pc.settings" data-i18n-aria="pc.settings" title="设置" aria-expanded="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg></button>
+    <button id="btn-about" class="icon" data-i18n-title="pc.about" data-i18n-aria="pc.about" title="关于"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg></button>
+    <button id="btn-qr" class="ghost" data-i18n="pc.connect" data-i18n-title="pc.connectTitle" title="显示连接二维码">连接 iPad</button>
+  </header>
+  <div id="settings-pop" class="popover" hidden role="dialog" data-i18n-aria="pc.settings" aria-label="设置">
+    <label class="switch row-switch" data-i18n-title="pc.previewAllowedTitle" title="iPad 屏幕标注模式下，把本机屏幕画面发送到 iPad 作为书写背景"><input type="checkbox" id="preview-allowed" checked><span class="track"></span><span class="sw-text"><span data-i18n="pc.previewAllowed">向 iPad 发送屏幕画面</span><small data-i18n="pc.previewAllowedTitle">iPad 屏幕标注模式下，把本机屏幕画面发送到 iPad 作为书写背景</small></span></label>
+    <button id="btn-preview-test" class="link-btn" type="button" data-i18n-title="pc.previewTestTitle" title="测试画面"><span data-i18n="pc.previewTest">测试画面</span></button>
+    <label class="switch row-switch" data-i18n-title="pc.captureVisibleTitle" title="默认关闭"><input type="checkbox" id="capture-visible"><span class="track"></span><span class="sw-text"><span data-i18n="pc.captureVisible">录屏/共享时显示标注</span><small data-i18n="pc.captureVisibleShort">默认关闭：录屏和会议共享里看不到标注。打开后能看到。</small></span></label>
+    <div class="shortcut-row">
+      <span data-i18n="ov.shortcut">屏幕标注 穿透 / 绘制 快捷键</span>
+      <div class="sc-line"><input id="shortcut" type="text" value="Ctrl+Alt+Shift+A" maxlength="80" spellcheck="false" data-i18n-aria="ov.shortcut" aria-describedby="shortcut-status"><button id="btn-shortcut" data-i18n="ov.apply">应用</button></div>
+      <small id="shortcut-status" role="status"></small>
+    </div>
+    <label class="lang-row"><span data-i18n="lang.label">语言</span><select id="lang-select" data-i18n-aria="lang.label"></select></label>
+  </div>
+  <div id="export-pop" class="popover menu-pop" hidden role="menu" data-i18n-aria="pc.export" aria-label="导出">
+    <button id="btn-png" class="menu-row" data-i18n-title="pc.savePngTitle" title="保存为 PNG 图片"><span data-i18n="pc.savePng">保存 PNG</span></button>
+    <button id="btn-svg" class="menu-row" data-i18n-title="pc.saveSvgTitle" title="保存为 SVG 矢量图"><span data-i18n="pc.saveSvg">保存 SVG</span></button>
+  </div>
+
+  <main id="canvas-wrap">
+    <canvas id="board"></canvas>
+    <div class="board-messages" aria-live="polite">
+      <div id="board-usage" hidden></div>
+      <div id="board-notice"></div>
+    </div>
+    <!-- v0.8.8：屏幕标注进行中，白板的工具全部收起，只留这张说明卡片 -->
+    <section id="annot-card" aria-labelledby="annot-title" hidden>
+      <div class="annot-dot" aria-hidden="true"></div>
+      <h2 id="annot-title" data-i18n="pc.annotTitle">正在屏幕标注</h2>
+      <p data-i18n="pc.annotBody">标注的工具都在屏幕上方的工具栏里。鼠标穿透时工具栏缩成一个小条，点“继续标注”就能接着写。</p>
+      <div class="annot-actions">
+        <button id="annot-draw" class="primary" data-i18n="pc.annotDraw">继续标注</button>
+        <button id="annot-back" class="ghost" data-i18n="pc.annotBack">回到白板</button>
+      </div>
+    </section>
+    <section id="onboard" aria-labelledby="onb-title">
+      <button id="onb-close" class="onb-close" type="button" data-i18n-title="onb.later" data-i18n-aria="onb.later" title="先不连接">×</button>
+      <h2 id="onb-title" data-i18n="onb.title">连接你的 iPad</h2>
+      <ol>
+        <li data-i18n="onb.step1">iPad 和这台电脑连同一个 Wi-Fi</li>
+        <li data-i18n="onb.step2">点下面的按钮，用 iPad 相机扫描二维码</li>
+        <li data-i18n="onb.step3">用 Apple Pencil 在 iPad 上书写，字会出现在电脑屏幕上</li>
+      </ol>
+      <button id="onb-connect" class="primary" data-i18n="onb.button">显示二维码</button>
+      <button id="onb-guide" class="link-btn" type="button" data-i18n="guide.first">先看看使用说明</button>
+      <p class="onb-note" id="onb-note" data-i18n="onb.note">只在局域网内传输，不经过云端，不需要注册账号。</p>
+      <p class="onb-note" id="onb-mac" data-i18n="onb.mac" hidden>Mac 上第一次使用时，请在“系统设置 › 隐私与安全性 › 屏幕录制”里允许墨投，iPad 才能看到电脑画面。</p>
+    </section>
+  </main>
+
+  <footer id="statusbar">
+    <span id="server-url" data-i18n="pc.starting">正在启动服务…</span>
+    <span id="latency" data-i18n="pc.latencyNone">延迟 --</span>
+    <span id="stroke-count" data-i18n="pc.strokes" data-i18n-args='{"n":0}'>0 笔</span>
+  </footer>
+
+  <div id="qr-modal" class="modal hidden">
+    <div id="qr-card" class="card" role="dialog" aria-modal="true" aria-labelledby="qr-title">
+      <h2 id="qr-title" data-i18n="pair.title">连接 iPad</h2>
+      <div id="pair-body"></div>
+      <div class="row"><button id="btn-qr-close" data-i18n="common.close">关闭</button></div>
+    </div>
+  </div>
+
+  <!-- v0.8.13：使用说明（内嵌页面 guide.html） -->
+  <div id="guide-modal" class="modal hidden">
+    <div class="guide-card" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+      <div class="guide-bar"><b id="guide-title" data-i18n="guide.open">使用说明</b><button id="guide-close" data-i18n="common.close">关闭</button></div>
+      <iframe id="guide-frame" data-i18n-title="guide.open" title="使用说明"></iframe>
+    </div>
+  </div>
+  <div id="about-modal" class="modal hidden">
+    <div class="card about" role="dialog" aria-modal="true" aria-labelledby="about-title">
+      <div class="about-head"><svg viewBox="140 120 760 760" aria-hidden="true"><defs><linearGradient id="lg-b" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#4A63FF"/><stop offset="1" stop-color="#2FE3CF"/></linearGradient></defs><g transform="translate(74 18) rotate(-35 512 560)"><path d="M512 860 L382 560 C370 532,376 506,396 488 L450 440 L574 440 L628 488 C648 506,654 532,642 560 Z" fill="url(#lg-b)"/><path d="M512 856 L512 600" stroke="#1f1f22" stroke-width="18" stroke-linecap="round"/><circle cx="512" cy="584" r="32" fill="#1f1f22"/><rect x="436" y="380" width="152" height="72" rx="18" fill="#E9ECF2"/><path d="M412 300 A140 140 0 0 1 612 300" fill="none" stroke="#F4F5F8" stroke-width="44" stroke-linecap="round"/><path d="M340 216 A250 250 0 0 1 684 216" fill="none" stroke="#F4F5F8" stroke-opacity=".5" stroke-width="44" stroke-linecap="round"/></g></svg><div><h2 id="about-title" data-i18n="app.name">墨投</h2><p data-i18n="menu.tagline">iPad 手写，电脑同步</p><p id="about-version"></p></div></div>
+      <p class="about-text" data-i18n="about.privacy">隐私：笔迹和屏幕画面只在你的局域网内传输，不上传到任何服务器；本软件不收集个人信息。</p>
+      <p class="about-text" id="about-data"></p>
+      <!-- v0.8.6 预留：激活码 / 功能解锁（正式收费前接入签名校验或商店授权） -->
+      <div class="license" id="license-box">
+        <div class="lic-head"><b data-i18n="lic.title">授权</b><span id="lic-state" class="pill"></span></div>
+        <div class="lic-form" id="lic-form"><input id="lic-code" type="text" maxlength="40" spellcheck="false" autocomplete="off" placeholder="INK-XXXXX-XXXXX-XXXXX-XXXXX" data-i18n-aria="lic.code"><button id="lic-activate" class="primary" data-i18n="lic.activate">激活</button></div>
+        <div class="lic-form" id="lic-active" hidden><span id="lic-code-hint"></span><button id="lic-deactivate" class="ghost" data-i18n="lic.deactivate">取消激活</button></div>
+        <small id="lic-msg" role="status"></small>
+      </div>
+      <details><summary data-i18n="about.notices">开源组件许可</summary><pre id="about-notices"></pre></details>
+      <div class="row"><button id="about-close" class="primary" data-i18n="common.close">关闭</button></div>
+    </div>
+  </div>
+
+  <script src="i18n.js"></script>
+  <script src="shared.js"></script>
+  <script src="ink.js"></script>
+  <script src="pctools.js"></script>
+  <script type="module" src="viewer.js"></script>
+</body>
+</html>
