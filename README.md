@@ -4,21 +4,65 @@
 
 Annotate your PC screen and use a whiteboard with iPad + Apple Pencil — for teaching, meetings and screencasts. Scan to connect, no app needed; everything stays on your local network, no account, no cloud.
 
-**下载 / Download：** [最新版本 / Latest release](https://github.com/Jasper6261/InkCast/releases/latest) → 页面下方 **Assets** 里的 `InkCast-<版本>-windows-x64.zip`（免安装）。
-页面上方绿色的 **Code → Download ZIP** 是源代码，不是程序，普通用户不要下载它。
-Get `InkCast-<version>-windows-x64.zip` under **Assets** on the release page. The green **Code → Download ZIP** button gives you the source code, not the app.
+## 两种使用方法 / Two ways to use InkCast
 
-## 快速开始 / Quick start
+| | **方式一：下载程序（推荐）** | **方式二：从源码编译** |
+|---|---|---|
+| 适合谁 | 只想直接用 | 想看 / 改代码，或自己编译 |
+| 在哪里下载 | 右侧 **Releases** → 最新版本 → 下方 **Assets** 里的 `InkCast-<版本>-windows-x64.zip` | 页面上方绿色的 **Code → Download ZIP**，或 `git clone` |
+| 下载到的是什么 | 编译好的程序 `InkCast.exe` + 快速上手说明 | 源代码（**没有** `InkCast.exe`） |
+| 需要准备什么 | 不需要，解压就能用 | 安装 Rust 和 VS C++ 生成工具（数 GB，首次准备约半小时以上） |
 
-1. 解压 zip，双击 `InkCast.exe`（免安装）。第一次运行如果出现“Windows 已保护你的电脑”，点“更多信息”→“仍要运行”（程序没有数字签名）。
-2. 点右上角“连接 iPad”，用 iPad 相机扫描二维码，在 Safari 中打开。
-3. iPad 上默认是**白板**；点上方“屏幕 | 白板”切换到**屏幕标注**，字会浮在电脑屏幕最上层。
+> 注意：Releases 的 Assets 里 GitHub 还会自动附上 “Source code (zip / tar.gz)”，那也是源代码，和 Code → Download ZIP 一样，不是程序。
+
+### 方式一：下载程序（推荐）
+
+1. 打开 [最新版本 / Latest release](https://github.com/Jasper6261/InkCast/releases/latest)，在页面下方 **Assets** 里下载 `InkCast-<版本>-windows-x64.zip`。
+2. 解压到任意文件夹，双击 `InkCast.exe`（免安装）。第一次运行如果出现“Windows 已保护你的电脑”，点“更多信息”→“仍要运行”（程序没有数字签名）。
+3. 点右上角“连接 iPad”，用 iPad 相机扫描二维码，在 Safari 中打开。
+4. iPad 上默认是**白板**；点上方“屏幕 | 白板”切换到**屏幕标注**，字会浮在电脑屏幕最上层。
+
+设置和存档保存在 `InkCast.exe` 旁边的 `data` 文件夹里；删除整个文件夹即完全卸载。
+
+### 方式二：从源码编译（Windows）
+
+1. **下载源码：** 点 **Code → Download ZIP** 并解压，或 `git clone https://github.com/Jasper6261/InkCast.git`。
+2. **检查环境：** 双击 `win-dev\00-env-check.bat`。它只读检查，不改动电脑。
+3. **安装工具链（只需一次）：** 双击 `win-dev\01-install-toolchain.bat`。它会安装 Rust 1.97 和 VS 2022 C++ 生成工具：
+   - 从官方地址下载，校验 SHA256 / 微软签名后再运行；
+   - 安装 VS 生成工具时会弹出管理员确认；
+   - 默认装到 `D:\DevTools`（没有 D 盘时装到 `%LOCALAPPDATA%\InkCastDevTools`），可用环境变量 `INKCAST_DEVTOOLS` 指定目录。
+4. **编译：** 双击 `win-dev\02-build.bat`。它会先运行测试，再编译，生成 `dist\wireless-whiteboard-v<版本>-portable.exe`。
+5. **运行：** 双击生成的 exe，之后的连接步骤和方式一相同。
+   - 想让设置和存档放在 exe 旁边（免安装模式），在 exe 所在文件夹新建一个空文件 `portable.txt`；
+   - 否则它们保存在 `%APPDATA%\com.inkcast.app`。
+
+也可以手动编译（需已装好 Rust 和 C++ 生成工具）：
+
+```
+cd src-tauri
+cargo test --locked
+cargo build --release --locked
+```
+
+生成的程序在 `src-tauri\target\release\` 里。
+
+**macOS（实验）：** 用 GitHub Actions 里的 `build-macos` 工作流生成 `.dmg`，见 `MAC.md`。
 
 ---
 
-1. Unzip and run `InkCast.exe`. If Windows SmartScreen appears, click “More info” → “Run anyway” (the app is not code-signed).
+**Option 1 — Download the app (recommended).**
+1. Open the [latest release](https://github.com/Jasper6261/InkCast/releases/latest) and download `InkCast-<version>-windows-x64.zip` under **Assets**. Unzip it and run `InkCast.exe` (portable). If Windows SmartScreen appears, click “More info” → “Run anyway” (the app is not code-signed).
 2. Click “Connect iPad” and scan the QR code with the iPad camera; open it in Safari.
 3. The iPad starts on the **Whiteboard**; tap “Screen | Whiteboard” to annotate the PC screen.
+
+**Option 2 — Build from source.** **Code → Download ZIP** (or `git clone`) gives you the source code only, with no `InkCast.exe`. On Windows:
+1. Run `win-dev\00-env-check.bat`.
+2. Run `win-dev\01-install-toolchain.bat` once to install Rust 1.97 and the VS 2022 C++ build tools.
+3. Run `win-dev\02-build.bat`. It builds `dist\wireless-whiteboard-v<version>-portable.exe`.
+4. Optional: put an empty `portable.txt` next to the exe to keep settings beside it. Otherwise they go to `%APPDATA%\com.inkcast.app`.
+
+The “Source code (zip / tar.gz)” files that GitHub adds to every release are also source only.
 
 ## 扫码后连不上？/ Can't connect?
 
@@ -54,24 +98,6 @@ Get `InkCast-<version>-windows-x64.zip` under **Assets** on the release page. Th
 - Windows 10 / 11（主要平台）；macOS 11+（实验，见 `MAC.md`）
 - iPad + Apple Pencil，iPadOS 自带 Safari
 - 电脑和 iPad 在同一个 Wi-Fi
-
-## 编译 / Build
-
-**Windows（推荐用仓库里的脚本）：**
-
-1. `win-dev\00-env-check.bat`：只读检查环境。
-2. `win-dev\01-install-toolchain.bat`：安装 Rust 1.97 和 VS 2022 C++ 生成工具（从官方地址下载，校验 SHA256 / 微软签名后再运行）。默认装到 `D:\DevTools`，可用环境变量 `INKCAST_DEVTOOLS` 指定其他目录。
-3. `win-dev\02-build.bat`：运行 `cargo test` 和 `cargo build --release`，生成 `dist\wireless-whiteboard-v<版本>-portable.exe`（免安装）。
-
-也可以手动编译 / or build manually:
-
-```
-cd src-tauri
-cargo test --locked
-cargo build --release --locked
-```
-
-**macOS：** 用 GitHub Actions 里的 `build-macos` 工作流生成 `.dmg`，见 `MAC.md`。
 
 ## 测试 / Tests
 
